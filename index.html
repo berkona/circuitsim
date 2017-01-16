@@ -15,6 +15,7 @@
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
 
 <style type="text/css">
+
 .page-header {
 	margin: 0px;
 }
@@ -25,6 +26,24 @@
 
 .io-form {
 	margin-top: 1em;
+}
+
+.unselectable {
+	-webkit-touch-callout: none;
+	-webkit-user-select: none;
+	-khtml-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+}
+
+.cursor-pointer {
+	cursor: pointer;
+	cursor: hand;
+}
+
+.cursor-move {
+	cursor: move;
 }
 
 #transistor-panel {
@@ -523,7 +542,7 @@ function wire_draw_handler(evt) {
 	      <a class="navbar-brand">Circuit Simulator</a>
 	    </div>
 	    <!-- Collect the nav links, forms, and other content for toggling -->
-	    <div class="collapse navbar-collapse" id="navbar-actions">
+	    <div class="collapse navbar-collapse unselectable cursor-pointer" id="navbar-actions">
 	    	<ul class="nav navbar-nav">
 	    		<li><a onclick="clear_action()">Clear</a></li>
 	    		<li><a onclick="undo_action()">Undo</a></li>
@@ -601,21 +620,21 @@ function wire_draw_handler(evt) {
 <div class="container">
 
 <div class="col-md-3">
-	<div class="panel panel-default">
+	<div class="panel panel-default unselectable">
 		<div class="panel-body">
 			<div class="row">
-				<ul id="transitor-panel-tabs" class="nav nav-tabs">
+				<ul id="transitor-panel-tabs" class="nav nav-tabs cursor-pointer">
 					<li id="transitor-panel-t-tab" role="presentation" class="active"><a onclick="show_transistor_panel()">Transistors</a></li>
 				<!-- <li role="presentation"><a href="#">Gates</a></li> -->
 				</ul>
 			</div>
-			<div id="transistor-panel" class="row"></div>
+			<div id="transistor-panel" class="row cursor-move"></div>
 		</div>
 	</div>
 	<div class="panel panel-default">
 		<div class="panel-body">
 			<div class="row">
-				<ul id="io-panel-tabs" class="nav nav-tabs">
+				<ul id="io-panel-tabs" class="nav nav-tabs unselectable cursor-pointer">
 					<li id="io-panel-i-tab" role="presentation" class="active"><a onclick="show_input_panel()">Inputs</a></li>
 					<li id="io-panel-o-tab" role="presentation"><a onclick="show_output_panel()">Outputs</a></li>
 				</ul>
@@ -625,12 +644,15 @@ function wire_draw_handler(evt) {
 	</div>
 </div>
 
-<div id="stage" class="col-md-9">
-<canvas id="background-layer" width="640" height="480"></canvas>
-<canvas id="node-layer" width="640" height="480"></canvas>
-<canvas id="edge-layer" width="640" height="480"></canvas>
-<canvas id="ui-layer" width="640" height="480" onclick="canvas_click_handler(event);" ondrop="drop_handler(event);" ondragover="dragover_handler(event);"></canvas>
-
+<div id="stage" class="col-md-9 unselectable">
+	<canvas id="background-layer" width="640" height="480"></canvas>
+	<canvas id="node-layer" width="640" height="480"></canvas>
+	<canvas id="edge-layer" width="640" height="480"></canvas>
+	<canvas id="ui-layer" width="640" height="480" 
+			onclick="canvas_click_handler(event);" 
+			ondrop="drop_handler(event);"
+			ondragover="dragover_handler(event);">
+	</canvas>
 </div>
 
 </div>
