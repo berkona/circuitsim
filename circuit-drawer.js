@@ -18,8 +18,8 @@
 	CircuitDrawer.prototype.renderAll = function(types) {
 		this.renderIO();
 		this.renderEdges();
-		for (var nid in circuitData.graph) {
-			var node = circuitData.graph[nid];
+		for (var nid in this.circuitData.graph) {
+			var node = this.circuitData.graph[nid];
 			if (node.type == LibCircuit.inputType || node.type == LibCircuit.outputType)
 				continue;
 			var img = types[node.type];
