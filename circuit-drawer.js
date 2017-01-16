@@ -12,6 +12,7 @@
 		this.max = max;
 		this.gridSize = gridSize;
 		this.pinRadius = pinRadius;
+		this.ioStopX = gridSize - pinRadius;
 	}
 
 	CircuitDrawer.prototype.renderAll = function(types) {
@@ -38,19 +39,19 @@
 		var nInputs = this.circuitData.inputPins.length;
 		var inputStep = this.nodeLayer.height / (nInputs + 1);
 
-		ctx.clearRect(0, 0, ioStopX + 2 * this.pinRadius + 2, this.nodeLayer.height);
+		ctx.clearRect(0, 0, this.ioStopX + 2 * this.pinRadius + 2, this.nodeLayer.height);
 
-		drawPins(nInputs, this.circuitData.inputPins, inputStep, 0, ioStopX, true);
+		drawPins(nInputs, this.circuitData.inputPins, inputStep, 0, this.ioStopX, true);
 
 		var nOutputs = this.circuitData.outputPins.length;
 		var outputStep = this.nodeLayer.height / (nOutputs + 1);
 
 		ctx.clearRect(
-			this.nodeLayer.width - (ioStopX + 2 * this.pinRadius + 2), 
+			this.nodeLayer.width - (this.ioStopX + 2 * this.pinRadius + 2), 
 			0, this.nodeLayer.width, this.nodeLayer.height
 		);
 		
-		drawPins(nOutputs, this.circuitData.outputPins, outputStep, this.nodeLayer.width - ioStopX, this.nodeLayer.width, false);
+		drawPins(nOutputs, this.circuitData.outputPins, outputStep, this.nodeLayer.width - this.ioStopX, this.nodeLayer.width, false);
 
 		function drawPins(n, arr, step, startX, stopX, pinOnRight) {
 			for (var i = 0; i < n; i++) {
@@ -145,7 +146,7 @@
 	}
 
 	CircuitDrawer.prototype._clearEdges = function() {
-		this.edgeLayer.getContext("2d").clearRect(0, 0, edgeLayer.width, edgeLayer.height);
+		this.edgeLayer.getContext("2d").clearRect(0, 0, this.edgeLayer.width, this.edgeLayer.height);
 	}
 
 	function astar_route(p1, p2, circuitData, fromID, toID, min, max, gridSize) {
@@ -286,8 +287,8 @@
 	}
 
 	CircuitDrawer.prototype.clear = function() {
-		this.nodeLayer.getContext("2d").clearRect(0, 0, nodeLayer.width, nodeLayer.height);
-		this.edgeLayer.getContext("2d").clearRect(0, 0, edgeLayer.width, edgeLayer.height);
+		this.nodeLayer.getContext("2d").clearRect(0, 0, this.nodeLayer.width, this.nodeLayer.height);
+		this.edgeLayer.getContext("2d").clearRect(0, 0, this.edgeLayer.width, this.edgeLayer.height);
 	}
 
 	// running in node.js
