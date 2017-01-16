@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<!-- jQuery -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js" integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8=" crossorigin="anonymous"></script>
+
+<!-- Bootstrap -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+
+<style type="text/css">
+.page-header {
+	margin: 0px;
+}
+
+.panel-icon {
+	height: 48px;
+}
+
+.io-form {
+	margin-top: 1em;
+}
+
+#transistor-panel {
+	padding-right: 0px;
+	padding-left: 0px;
+	margin-top: 10px;
+}
+
+#stage {
+	width: 640px;
+	height: 480px;
+}
+
+#stage canvas { 
+	position: absolute; 
+	top: 0px;
+	left: 0px;
+}
+ 
+#ui-layer {z-index: 4 }
+#edge-layer { z-index: 3 }
+#node-layer { z-index: 2 }
+#background-layer { z-index: 1 }
+
+</style>
+
+
+<script type="text/javascript" src="libcircuit.js"></script>
+<script type="text/javascript" src="libastar.js"></script>
+<script type="text/javascript" src="circuit-data.js"></script>
+<script type="text/javascript" src="circuit-drawer.js"></script>
+
+<script type="text/javascript">
+
+// this is all ui javascript
+var nodeLayer, backgroundLayer, edgeLayer, uiLayer;
+
+var gridSize = 20;
+var lineDash = [1, gridSize-1];
+
+var connectionNodeRadius = 3;
+var ioStopX = gridSize - connectionNodeRadius;
+
+var circuitData, circuitDrawer;
+
+// can't use a literal b/c we want to use type names from LibCircuit
+var transistor_types = {}
+
+transistor_types[LibCircuit.pmosType] = {
+	src: "pmos.png",
+	text_pos: [5, 5],
+	pins: [
+		[39, -1],
+		[-1, 22],
+		[39, 47],
+	],
+}
+
+transistor_types[LibCircuit.nmosType] = {
+	src: "nmos.png",
+	text_pos: [5, 5],
+	pins: [
+		[39, -1],
+		[-1, 23],
+		[39, 47],
+	]
+}
+
+transistor_types[LibCircuit.vccType] = {
+	src: "vcc.png",
+	text_pos: [5, 26],
+	pins: [
+		[41, 17],
+	]
+}
+
+transistor_types[LibCircuit.gndType] = {
+	src: "gnd.png",
+	text_pos: [5, 26],
+	pins: [
+		[41, 17],
+	]
+}
+
+$(document).ready(load_doc)
+
+function load_doc() {
+	nodeLayer = document.getElementById('node-layer');
+	edgeLayer = document.getElementById('edge-layer');
+	backgroundLayer = document.getElementById('background-layer')
+	uiLayer = document.getElementById('ui-layer');
+
+	var min = {
+		x: gridSize,
+		y: gridSize,
+	}
+	var max = {
+		x: edgeLayer.width - gridSize,
+		y: edgeLayer.height - gridSize,
+	}
+
+	circuitData = new CircuitData();
+	circuitDrawer = new CircuitDrawer(nodeLayer, edgeLayer, circuitData, min, max, gridSize, connectionNodeRadius);
+
+	render_complete_grid();
+	show_transistor_panel();
+	show_input_panel();
+}
+
+function show_transistor_panel () {
+	$("#transitor-panel-tabs li").removeClass("active");
+	$("#transitor-panel-t-tab").addClass("active");
+
+	var tp = $("#transistor-panel");
+	tp.empty();
+	for (var id in transistor_types) {
+		var typedef = transistor_types[id];
+		tp.append(
+			$('<img id="'+id+'" src="'+typedef.src+'" class="drag-icon col-md-3" draggable="true" ondragstart="drag_handler(event);"></img>')
+		);
+	};
+}
+
+function add_pin_names(arr, addEventHandler) {
+	var ip = $("#io-panel");
+	ip.empty();
+	for (var i = 0; i < arr.length; i++) {
+		var ioTemplate = $('#io-template').clone();
+		ioTemplate.removeClass("hidden");
+		ioTemplate.find(".io-label").text(arr[i]);
+		ip.append(ioTemplate)
+	};
+
+	var addTemplate = $('#io-add-template').clone()
+	addTemplate.removeClass("hidden");
+	addTemplate.find(".io-submit-btn").click(addEventHandler);
+	ip.append(addTemplate)
+}
+
+function show_input_panel () {
+	// console.log("Showing input panel");
+
+	$("#io-panel-tabs li").removeClass("active");
+	$("#io-panel-i-tab").addClass("active");
+
+	add_pin_names(circuitData.getInputNames(), add_input_action);
+}
+
+function show_output_panel() {
+	// console.log("Showing output panel");
+
+	$("#io-panel-tabs li").removeClass("active");
+	$("#io-panel-o-tab").addClass("active");
+
+	add_pin_names(circuitData.getOutputNames(), add_output_action);
+}
+
+function add_input_action() {
+	var name = $("#addIOPin").val();
+
+	circuitData.addIO(name, true);
+	circuitDrawer.renderIO();
+	circuitDrawer.renderEdges();
+
+	show_input_panel();
+}
+
+function add_output_action() {
+	var name = $('#addIOPin').val();
+
+	circuitData.addIO(name, false);
+	circuitDrawer.renderIO();
+	circuitDrawer.renderEdges();
+
+	show_output_panel();
+}
+
+function verify_action() {
+	$("#error-panel").addClass("hidden");
+	$("#success-panel").addClass("hidden");
+
+	var result = LibCircuit.runAllChecks(circuitData.graph);
+	
+	if (result) {
+		$("#error-message").text(result[1]);
+		$("#error-panel").removeClass("hidden");
+	} else {
+		$("#success-panel").removeClass("hidden");
+	}
+}
+
+function simulate_action() {
+	$("#error-panel").addClass("hidden");
+	$("#success-panel").addClass("hidden");
+
+	var verifyResult = LibCircuit.runAllChecks(circuitData.graph);
+	if (verifyResult) {
+		$("#error-message").text(verifyResult[1]);
+		$("#error-panel").removeClass("hidden");
+		return;
+	}
+
+	var result = LibCircuit.simulate(circuitData.graph);
+
+	console.log("Simulate result:");
+	console.log(result);
+
+	var template = "<td></td>";
+	$("#simulate-panel").removeClass("hidden");
+
+	var headerEle = $("#simulate-panel thead tr");
+	headerEle.empty();
+
+	function AddHeader(nid) {
+		var node = circuitData.getNode(nid);
+		var ele = $(template)
+		ele.text(node.name);
+		headerEle.append(ele);
+	}
+
+	result.inputs.forEach(AddHeader);
+	result.outputs.forEach(AddHeader);
+
+	var tableEle = $("#simulate-panel tbody");
+	tableEle.empty();
+
+	function AddRow(row) {
+		var rowEle = $("<tr></tr>");
+		row.forEach(function (x) {
+			var ele = $(template);
+			ele.text(x);
+			rowEle.append(ele);
+		})
+		tableEle.append(rowEle);
+	}
+
+	result.rows.forEach(AddRow);
+}
+
+function hide_message(selector) {
+	$(selector).addClass("hidden")
+}
+
+function undo_action() {
+	if (!circuitData.canUndo()) return;
+	var result = circuitData.undo();
+	var type = result[0];
+	if (type == 'node') {
+		circuitDrawer.deleteNode(result[1]);
+	} else if (type == 'edge') {
+		circuitDrawer.renderEdges();
+	} else if (type == 'io') {
+		circuitDrawer.renderIO();
+		circuitDrawer.renderEdges();
+		io_changed();
+	} else {
+		console.warn("Got unknown undo type back from circuitData");
+	}
+}
+
+function io_changed() {
+	if ($("#io-panel-i-tab").hasClass("active")) {
+		show_input_panel();
+	} else if ($("#io-panel-o-tab").hasClass("active")) {
+		show_output_panel();
+	} else {
+		console.warn("Neither tab is selected.  This should not happen.");
+	}
+}
+
+function clear_action() {
+	circuitData.clear();
+	circuitDrawer.clear();
+	io_changed();	
+}
+
+function export_action() {
+	var data = circuitData.export();
+	// console.log("Exported data to object");
+	// console.log(data);
+	var serialized = JSON.stringify(data);
+	$("#export-panel").removeClass("hidden");
+	$("#export-panel textarea").text(serialized);
+}
+
+function show_panel(selector) {
+	// console.log("Showing panel: "+selector);
+	// console.log($(selector));
+	$(selector).removeClass("hidden");
+}
+
+function import_action() {
+	try {
+		var serialized = $("#import-panel textarea").val();
+		// console.log("Serialized data received:");
+		// console.log(serialized);
+		var data = JSON.parse(serialized);
+		// console.log("Import data from text");
+		// console.log(data);
+		circuitData.clear();
+		circuitDrawer.clear();
+		circuitData.import(data);
+		var imageMap = {};
+		for (var type in transistor_types) {
+			var img = document.getElementById(type);
+			imageMap[type] = img;
+		}
+		circuitDrawer.renderAll(imageMap);
+		io_changed();
+		$("#import-success-panel").removeClass("hidden");
+	} catch (e) {
+		$("#import-error-panel").removeClass("hidden");
+		$("#import-error-panel .error-message").text(e);
+	}
+	$("#import-panel textarea").val("");
+	$("#import-panel").addClass("hidden");
+}
+
+function render_complete_grid() {
+	var ctx = backgroundLayer.getContext("2d");
+
+	var x = 0;
+	var y = 0;
+	var width = backgroundLayer.width;
+	var height = backgroundLayer.height;
+
+	ctx.save();
+	ctx.setLineDash(lineDash);
+
+	// detemine grids lines to re-render
+	var startI = Math.floor(x / gridSize)+1;
+	var endI = Math.ceil((x + width) / gridSize);
+	var startY = Math.floor(y / gridSize) * gridSize;
+	var endY = Math.ceil((y + height) / gridSize) * gridSize;
+	for (var i = startI; i < endI; i++) {
+		var x = i * gridSize;
+		ctx.beginPath();
+		ctx.moveTo(x, startY);
+		ctx.lineTo(x, endY);
+		ctx.stroke();
+	}
+
+	ctx.restore();
+}
+
+function window_to_canvas(canvas, x, y) {
+	var rect = canvas.getBoundingClientRect();
+	return {
+		x: Math.floor( (x - rect.left) / (rect.right - rect.left) * canvas.width ),
+		y: Math.floor( (y - rect.top) / (rect.bottom - rect.top) * canvas.height ),
+	};
+}
+
+function mouse_to_element(selector, evt) {
+	var rect = edgeLayer.getBoundingClientRect();
+	var offset = $(selector).offset();
+	return {
+		x: (evt.pageX - offset.left) / (rect.right - rect.left) * edgeLayer.width,
+		y: (evt.pageY - offset.top) / (rect.bottom - rect.top) * edgeLayer.height,
+	};
+}
+
+var mouse_offset = null;
+
+function drag_handler(evt) {
+	mouse_offset = mouse_to_element("#"+evt.target.id, evt);
+    evt.dataTransfer.setData("text", evt.target.id);
+}
+
+function dragover_handler (evt) {
+	evt.preventDefault();
+	evt.dataTransfer.dropEffect = "copy";
+}
+
+function snap_to_canvas(pos, width, height) {
+	// snap to grid
+	pos.x = Math.round(pos.x / gridSize) * gridSize;
+	pos.y = Math.round(pos.y / gridSize) * gridSize;
+
+	// bound by canvas size
+	pos.x = Math.max(pos.x, ioStopX + 2 * connectionNodeRadius + 5);
+	pos.y = Math.max(pos.y, 0);
+	pos.x = Math.min(pos.x, nodeLayer.width - width);
+	pos.y = Math.min(pos.y, nodeLayer.height - height);
+	return pos;
+}
+
+function drop_handler (evt) {
+	evt.preventDefault();
+
+	var pos = window_to_canvas(nodeLayer, evt.clientX, evt.clientY);
+	var typeId = evt.dataTransfer.getData("text");
+	var img = document.getElementById(typeId);
+	var type = transistor_types[typeId];
+
+	// conform pos to offset when started dragging
+	pos.x = pos.x - mouse_offset.x + img.width/2; // add half width b/c centers image on mouse
+	pos.y = pos.y - mouse_offset.y;
+
+	pos = snap_to_canvas(pos, img.naturalWidth, img.naturalHeight);
+
+	var rect = {
+		x: pos.x - gridSize/2,
+		y: pos.y - gridSize/2,
+		width: img.naturalWidth + gridSize,
+		height: img.naturalHeight + gridSize,
+	}
+
+	// prevent rendering over another symbol
+	if (circuitData.rectIntersects(rect)) {
+		console.log("Ignoring drop onto another symbol");
+		return;
+	}
+
+	var nid = circuitData.addNode(typeId, type, pos, rect);
+	circuitDrawer.renderNode(circuitData.getNode(nid), img, true);
+}
+
+var lastClickedNode = null;
+var clickBox = 20;
+
+function canvas_click_handler (evt) {
+	evt.preventDefault();
+
+	var pos = window_to_canvas(edgeLayer, evt.clientX, evt.clientY);
+
+	// console.log("User clicked at: "+pos.x+", "+pos.y);
+
+	var closest_pin = circuitData.closestPin(pos, clickBox);
+
+	if (lastClickedNode) {
+		uiLayer.getContext("2d").clearRect(0, 0, uiLayer.width, uiLayer.height);
+		uiLayer.removeEventListener("mousemove", wire_draw_handler);
+
+		if (closest_pin) {
+			circuitData.addEdge(lastClickedNode, closest_pin);
+			circuitDrawer.renderEdges();
+		} else {
+			pos = snap_to_canvas(pos, 10, 10);
+			var nid = circuitData.addWire(lastClickedNode, pos);
+			circuitDrawer.renderNode(circuitData.getNode(nid));
+			circuitDrawer.renderEdges();
+		}
+
+		lastClickedNode = null;
+	} else if (!closest_pin) {
+		console.warn("Could not find closest connect node");
+	} else { // !lastClickedNode && closest_pin
+		lastClickedNode = closest_pin
+		uiLayer.addEventListener("mousemove", wire_draw_handler);
+	}
+}
+
+function wire_draw_handler(evt) {
+	// console.log("mouse moved");
+	// console.log(evt);
+
+	var pos = window_to_canvas(uiLayer, evt.clientX, evt.clientY);
+
+	if (!lastClickedNode)
+		return console.error("Could not get lastClickedNode this should not happen");
+
+	var pin_pos = circuitData.getPin(lastClickedNode[0], lastClickedNode[1]).pos;
+
+	var ctx = uiLayer.getContext("2d");
+	
+	ctx.clearRect(0, 0, uiLayer.width, uiLayer.height);
+	
+	ctx.save();
+
+	ctx.setLineDash([5, 5]);
+
+	ctx.beginPath();
+	ctx.moveTo(pin_pos.x, pin_pos.y);
+	ctx.lineTo(pos.x, pos.y);
+	ctx.stroke();
+
+	ctx.restore();
+}
+
+</script>
+
+</head>
+
+<body>
+
+<nav class="navbar navbar-default">
+	<div class="container-fluid">
+		<!-- Brand and toggle get grouped for better mobile display -->
+	    <div class="navbar-header">
+	      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar-actions" aria-expanded="false">
+	        <span class="sr-only">Toggle navigation</span>
+	        <span class="icon-bar"></span>
+	        <span class="icon-bar"></span>
+	        <span class="icon-bar"></span>
+	      </button>
+	      <a class="navbar-brand">Circuit Simulator</a>
+	    </div>
+	    <!-- Collect the nav links, forms, and other content for toggling -->
+	    <div class="collapse navbar-collapse" id="navbar-actions">
+	    	<ul class="nav navbar-nav">
+	    		<li><a onclick="clear_action()">Clear</a></li>
+	    		<li><a onclick="undo_action()">Undo</a></li>
+	    		<li><a onclick="verify_action()">Verify</a></li>
+	    		<li><a onclick="simulate_action()">Simulate</a></li>
+	    		<li><a onclick="export_action()">Export</a></li>
+	    		<li><a onclick="show_panel('#import-panel')">Import</a></li>
+	    	</ul>
+	    </div><!-- /.navbar-collapse -->
+	</div>
+
+</nav>
+
+<div id="success-panel" class="hidden container alert alert-success alert-dismissible" role="alert">
+  <button type="button" class="btn btn-success btn-xs" aria-label="Close" onclick="hide_message('#success-panel')"><span aria-hidden="true">&times;</span></button>
+  <strong>Circuit passed all sanity checks!</strong>
+</div>
+
+<div id="error-panel" class="hidden container alert alert-warning alert-dismissible" role="alert">
+  <button type="button" class="btn btn-warning btn-xs" aria-label="Close" onclick="hide_message('#error-panel')"><span aria-hidden="true">&times;</span></button>
+  <strong>That's not a valid circuit!</strong>  <span id="error-message"></span>
+</div>
+
+<div id="export-panel" class="container hidden alert alert-info alert-dismissable">
+	<div class="col-md-12">
+		<p><strong>Copy text below and save as desired.</strong></p>
+	</div>
+	<div class="col-md-1">
+		<button type="button" class="btn btn-lg btn-info" aria-label="Close" onclick="hide_message('#export-panel')"><span aria-hidden="true">&times;</span></button>
+	</div>
+	<div class="col-md-11">
+		<textarea style="width:100%; height:100%;"></textarea>
+	</div>
+</div>
+
+<div id="import-success-panel" class="hidden container alert alert-success alert-dismissible" role="alert">
+  <button type="button" class="btn btn-success btn-xs" aria-label="Close" onclick="hide_message('#import-success-panel')"><span aria-hidden="true">&times;</span></button>
+  <strong>Circuit was successfully imported!</strong>
+</div>
+
+<div id="import-error-panel" class="hidden container alert alert-warning alert-dismissible" role="alert">
+  <button type="button" class="btn btn-warning btn-xs" aria-label="Close" onclick="hide_message('#import-error-panel')"><span aria-hidden="true">&times;</span></button>
+  <strong>Circuit could not be imported!</strong>  <span class="error-message"></span>
+</div>
+
+<div id="import-panel" class="container hidden alert alert-info alert-dismissable">
+	<div class="col-md-12">
+		<p><strong>Enter text from export below then click button.</strong></p>
+	</div>
+	<div class="col-md-1">
+		<button type="button" class="btn btn-lg btn-info" aria-label="Import" onclick="import_action()"><span aria-hidden="true">Import</span></button>
+	</div>
+	<div class="col-md-11">
+		<textarea style="width:100%; height:100%;"></textarea>
+	</div>
+</div>
+
+<div id="simulate-panel" class="container hidden alert alert-dismissable">
+	<div class="col-md-1">
+		<button type="button" class="btn btn-lg btn-info" aria-label="Close" onclick="hide_message('#simulate-panel')"><span aria-hidden="true">&times;</span></button>
+	</div>
+	<div class="col-md-11">
+		<table class="table table-bordered table-hover">
+			<thead>
+				<tr>
+				</tr>
+			</thead>
+			<tbody>
+			</tbody>
+		</table>
+	</div>
+</div>
+
+
+<div class="container">
+
+<div class="col-md-3">
+	<div class="panel panel-default">
+		<div class="panel-body">
+			<div class="row">
+				<ul id="transitor-panel-tabs" class="nav nav-tabs">
+					<li id="transitor-panel-t-tab" role="presentation" class="active"><a onclick="show_transistor_panel()">Transistors</a></li>
+				<!-- <li role="presentation"><a href="#">Gates</a></li> -->
+				</ul>
+			</div>
+			<div id="transistor-panel" class="row"></div>
+		</div>
+	</div>
+	<div class="panel panel-default">
+		<div class="panel-body">
+			<div class="row">
+				<ul id="io-panel-tabs" class="nav nav-tabs">
+					<li id="io-panel-i-tab" role="presentation" class="active"><a onclick="show_input_panel()">Inputs</a></li>
+					<li id="io-panel-o-tab" role="presentation"><a onclick="show_output_panel()">Outputs</a></li>
+				</ul>
+			</div>
+			<div id="io-panel" class="row"></div>
+		</div>
+	</div>
+</div>
+
+<div id="stage" class="col-md-9">
+<canvas id="background-layer" width="640" height="480"></canvas>
+<canvas id="node-layer" width="640" height="480"></canvas>
+<canvas id="edge-layer" width="640" height="480"></canvas>
+<canvas id="ui-layer" width="640" height="480" onclick="canvas_click_handler(event);" ondrop="drop_handler(event);" ondragover="dragover_handler(event);"></canvas>
+
+</div>
+
+</div>
+
+<div id="io-template" class="io-form col-md-12 hidden"><span class="io-label"></span> <!-- <span class="glyphicon glyphicon-remove"></span> --></div>
+
+<form id="io-add-template" class="io-form col-md-12 form-inline hidden">
+	<div class="form-group col-md-9">
+		<label class="sr-only" for="addIOPin">Add IO Pin</label>
+		<div class="input-group">
+			<input type="text" class="form-control" id="addIOPin" placeholder="Name" />
+		</div>
+	</div>
+	<div class="col-md-3">
+		<button style="margin-left: 1em" type="button" class="btn btn-primary io-submit-btn">&plus;</button>
+	</div>
+</form>
+
+</body>
+
+</html>
