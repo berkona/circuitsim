@@ -95,7 +95,7 @@
 	    <!-- Collect the nav links, forms, and other content for toggling -->
 	    <div class="collapse navbar-collapse unselectable cursor-pointer" id="navbar-actions">
 	    	<ul class="nav navbar-nav">
-	    		<li><a onclick="clear_action()">Clear</a></li>
+	    		<li><a onclick="show_panel('#clear-panel')">Clear</a></li>
 	    		<li><a onclick="undo_action()">Undo</a></li>
 	    		<li><a onclick="verify_action()">Verify</a></li>
 	    		<li><a onclick="simulate_action()">Simulate</a></li>
@@ -107,13 +107,25 @@
 
 </nav>
 
+<div id="clear-panel" class="hidden container alert alert-danger alert-dismissible" role="alert">
+	<div class="col-md-12">
+		<p><strong>Are you sure you want to clear the circuit simulator?  You will lose all unsaved progress.</strong></p>
+	</div>
+	<div class="col-md-6">
+		<button type="button" class="btn btn-danger btn-md" aria-label="Ok" onclick="clear_action()">Ok</button>
+	</div>
+	<div class="col-md-6">
+		<button style="float: right" type="button" class="btn btn-primary btn-md" aria-label="Cancel" onclick="hide_panel('#clear-panel')">Cancel</button>
+	</div>
+</div>
+
 <div id="success-panel" class="hidden container alert alert-success alert-dismissible" role="alert">
-  <button type="button" class="btn btn-success btn-xs" aria-label="Close" onclick="hide_message('#success-panel')"><span aria-hidden="true">&times;</span></button>
+  <button type="button" class="btn btn-success btn-xs" aria-label="Close" onclick="hide_panel('#success-panel')"><span aria-hidden="true">&times;</span></button>
   <strong>Circuit passed all sanity checks!</strong>
 </div>
 
 <div id="error-panel" class="hidden container alert alert-warning alert-dismissible" role="alert">
-  <button type="button" class="btn btn-warning btn-xs" aria-label="Close" onclick="hide_message('#error-panel')"><span aria-hidden="true">&times;</span></button>
+  <button type="button" class="btn btn-warning btn-xs" aria-label="Close" onclick="hide_panel('#error-panel')"><span aria-hidden="true">&times;</span></button>
   <strong>That's not a valid circuit!</strong>  <span id="error-message"></span>
 </div>
 
@@ -122,7 +134,7 @@
 		<p><strong>Copy text below and save as desired.</strong></p>
 	</div>
 	<div class="col-md-1">
-		<button type="button" class="btn btn-lg btn-info" aria-label="Close" onclick="hide_message('#export-panel')"><span aria-hidden="true">&times;</span></button>
+		<button type="button" class="btn btn-lg btn-info" aria-label="Close" onclick="hide_panel('#export-panel')"><span aria-hidden="true">&times;</span></button>
 	</div>
 	<div class="col-md-11">
 		<textarea style="width:100%; height:100%;"></textarea>
@@ -130,12 +142,12 @@
 </div>
 
 <div id="import-success-panel" class="hidden container alert alert-success alert-dismissible" role="alert">
-  <button type="button" class="btn btn-success btn-xs" aria-label="Close" onclick="hide_message('#import-success-panel')"><span aria-hidden="true">&times;</span></button>
+  <button type="button" class="btn btn-success btn-xs" aria-label="Close" onclick="hide_panel('#import-success-panel')"><span aria-hidden="true">&times;</span></button>
   <strong>Circuit was successfully imported!</strong>
 </div>
 
 <div id="import-error-panel" class="hidden container alert alert-warning alert-dismissible" role="alert">
-  <button type="button" class="btn btn-warning btn-xs" aria-label="Close" onclick="hide_message('#import-error-panel')"><span aria-hidden="true">&times;</span></button>
+  <button type="button" class="btn btn-warning btn-xs" aria-label="Close" onclick="hide_panel('#import-error-panel')"><span aria-hidden="true">&times;</span></button>
   <strong>Circuit could not be imported!</strong>  <span class="error-message"></span>
 </div>
 
@@ -153,7 +165,7 @@
 
 <div id="simulate-panel" class="container hidden alert alert-dismissable">
 	<div class="col-md-1">
-		<button type="button" class="btn btn-lg btn-info" aria-label="Close" onclick="hide_message('#simulate-panel')"><span aria-hidden="true">&times;</span></button>
+		<button type="button" class="btn btn-lg btn-info" aria-label="Close" onclick="hide_panel('#simulate-panel')"><span aria-hidden="true">&times;</span></button>
 	</div>
 	<div class="col-md-11">
 		<table class="table table-bordered table-hover">

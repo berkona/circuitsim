@@ -218,8 +218,8 @@
 		result.rows.forEach(AddRow);
 	}
 
-	expose(hide_message, 'hide_message');
-	function hide_message(selector) {
+	expose(hide_panel, 'hide_panel');
+	function hide_panel(selector) {
 		$(selector).addClass("hidden")
 	}
 
@@ -255,7 +255,8 @@
 	function clear_action() {
 		circuitData.clear();
 		circuitDrawer.clear();
-		io_changed();	
+		io_changed();
+		hide_panel("#clear-panel");
 	}
 
 	expose(export_action, 'export_action');
