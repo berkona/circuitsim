@@ -266,11 +266,6 @@
 
 		var node = circuitData[nid];
 		var pin = node.pins[pid];
-		// simulate multiple driving of output
-		if (pin.sim_value && pin.sim_value != value) {
-			pin.sim_value = 'X';
-			return;
-		}
 
 		// this prevents loops due to the symmetric edges in the graph
 		var id = nid+"-"+pid;
@@ -278,7 +273,12 @@
 			return;
 		visited[id] = true;
 
+		// simulate multiple driving of output
+		if (pin.sim_value && pin.sim_value != value) {
+			value = 'X';
+		}
 		pin.sim_value = value;
+
 		// nmos logic
 		if (node.type == nmosType) {
 			// drain
