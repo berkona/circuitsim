@@ -41,6 +41,7 @@
 			[ root.selfShort, 'Self Short Check' ],
 			[ root.shortCheck, 'Short Check' ],
 			[ root.inputShort, 'Input Short' ],
+			[ root.gateShort, 'Gate Short' ],
 		];
 
 		for (var i = 0; i < allChecks.length; i++) {
@@ -133,6 +134,17 @@
 		}
 	}
 
+	// verifies all pins are connected
+	root.allPinsConnected = function(circuitData) {
+		for (var nid in circuitData) {
+			var node = circuitData[nid];
+			for (var pid = node.pins.length - 1; pid >= 0; pid--) {
+				if (node.pins[pid].adj.length == 0)
+					return "Node "+nid+", pin "+pinNames[pid]+" was not connected."
+			};
+		}
+	}
+
 	function hasCycle(circuitData, nid, pid, parent, visited) {
 		if (!visited)
 			visited = {};
@@ -213,15 +225,23 @@
 		return error;
 	}
 
-	// verifies all pins are connected
-	root.allPinsConnected = function(circuitData) {
+	// test if gate of a transistor is directly connected to gnd or src
+	root.gateShort = function(circuitData) {
+		var error = null;
 		for (var nid in circuitData) {
 			var node = circuitData[nid];
-			for (var pid = node.pins.length - 1; pid >= 0; pid--) {
-				if (node.pins[pid].adj.length == 0)
-					return "Node "+nid+", pin "+pinNames[pid]+" was not connected."
-			};
+			if (node.type != nmosType && node.type != pmosType) continue;
+			function isShorted(toNID, toPID) {
+				if (circuitData[toNID].type == vccType) {
+					error = "Node "+nid+" has gate pin shorted to source node "+toNID+".";
+				} else if (circuitData[toNID].type == gndType) {
+					error = "Node "+nid+" has gate pin shorted to ground node "+toNID+".";
+				}
+			}
+			circuitTraverser(circuitData, nid, 1, isShorted);
+			if (error) break;
 		}
+		return error;
 	}
 
 	function simulateInputs(circuitData, inputMap) {
