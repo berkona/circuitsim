@@ -29,7 +29,7 @@
 
 	// this runs all checks in the order intended to be run
 	// returns either null for all good or a message if errored somewhere
-	// many of these checks are built on the assumption that all the checks before them already being run with a good result
+	// some of these checks are built on the assumption that all the checks before them already being run with a good result
 	// it might be possible to revalulate the checks and refactor them to run even without previous checks being successful
 	root.runAllChecks = function(circuitData) {
 
@@ -37,9 +37,10 @@
 			[ root.ioCheck, 'IO Check' ],
 			[ root.powerCheck, 'Power Check' ],
 			[ root.parityCheck, 'Parity Check' ],
-			[ root.shortCheck, 'Short Check' ],
-			[ root.selfShortCheck, 'Self Short Check' ],
 			[ root.allPinsConnected, 'All Pins Connected' ],
+			[ root.selfShort, 'Self Short Check' ],
+			[ root.shortCheck, 'Short Check' ],
+			[ root.inputShort, 'Input Short' ],
 		];
 
 		for (var i = 0; i < allChecks.length; i++) {
@@ -132,6 +133,29 @@
 		}
 	}
 
+	function hasCycle(circuitData, nid, pid, parent, visited) {
+		if (!visited)
+			visited = {};
+
+		var id = nid+"-"+pid;
+		visited[id] = true;
+
+		var pin = circuitData[nid].pins[pid];
+		for (var i = pin.adj.length - 1; i >= 0; i--) {
+			var to = pin.adj[i];
+			var toNID = to[0];
+			var toPID = to[1];
+			var toID = toNID+"-"+toPID;
+			if (!visited[toID]) {
+				if (hasCycle(circuitData, toNID, toPID, nid, visited))
+					return true;
+			} else if (toNID != parent) {
+				return true;
+			}
+		};
+		return false;
+	}
+
 	// goes down all paths of pin represented by nid, pid running func at each pin
 	function circuitTraverser(circuitData, nid, pid, func, parent) {
 		func(nid, pid);
@@ -145,6 +169,18 @@
 		};
 	}
 
+	// test if any pin has a cycle
+	root.selfShort = function(circuitData) {
+		for (var nid in circuitData) {
+			var node = circuitData[nid];
+			for (var pid = node.pins.length - 1; pid >= 0; pid--) {
+				if (hasCycle(circuitData, nid, pid))
+					return "Node "+nid+", pin "+pinNames[pid]+" is shorted to itself.";
+			}
+		}
+		return null;
+	}
+
 	// test if source is connected directly to ground
 	root.shortCheck = function(circuitData) {
 		var error = null;
@@ -156,47 +192,36 @@
 					error = "Source node "+node.nid+" is shorted to ground node "+toNID+".";
 			}
 			circuitTraverser(circuitData, nid, 0, isGround);
+			if (error) break;
 		}
 		return error;
 	}
 
-	// test if any node is connected to itself
-	root.selfShortCheck = function(circuitData) {
+	//test if an input is shorted to another input
+	root.inputShort = function(circuitData) {
+		var error = null;
 		for (var nid in circuitData) {
 			var node = circuitData[nid];
-			for (var i = node.pins.length - 1; i >= 0; i--) {
-				var pin = node.pins[i];
-				for (var i = pin.adj.length - 1; i >= 0; i--) {
-					var toNID = pin.adj[i][0];
-					if (nid == toNID) {
-						return "Node "+nid+" is connected to itself."
-					}
-				};
-			};
-		};
-
-		return null;
+			if (node.type != inputType) continue;
+			function isShorted(toNID, toPID) {
+				if (circuitData[toNID].type == inputType && nid != toNID)
+					error = "Input node "+nid+" is shorted to input node "+toNID+".";
+			}
+			circuitTraverser(circuitData, nid, 0, isShorted);
+			if (error) break;
+		}
+		return error;
 	}
 
 	// verifies all pins are connected
 	root.allPinsConnected = function(circuitData) {
 		for (var nid in circuitData) {
 			var node = circuitData[nid];
-			for (var i = node.pins.length - 1; i >= 0; i--) {
-				if (node.pins[i].adj.length == 0)
-					return "Node "+nid+", pin "+pinNames[i]+" was not connected."
+			for (var pid = node.pins.length - 1; pid >= 0; pid--) {
+				if (node.pins[pid].adj.length == 0)
+					return "Node "+nid+", pin "+pinNames[pid]+" was not connected."
 			};
 		}
-	}
-
-	root.simpleCycle = function(circuitData) {
-		var error = null;
-		return null;
-	}
-
-	// test if circuit is truly combinational
-	root.combCheck = function(circuitData) {
-		return null;
 	}
 
 	function simulateInputs(circuitData, inputMap) {
