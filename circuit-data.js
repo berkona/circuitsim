@@ -419,15 +419,16 @@
 		return data;
 	}
 
-	var latest_file_version = "2";
+	var latest_file_version = "3";
 
 	var converter_map = {
-		"0": unversioned_converter,
+		"0": version_0_converter,
 		"1": version_1_converter,
+		"2": version_2_converter,
 	};
 
 	// version 1 reduces file size by removing redundant data
-	function unversioned_converter(data) {
+	function version_0_converter(data) {
 		for (var i = data.undoStack.length - 1; i >= 0; i--) {
 			delete data.undoStack[i].node;
 		};
@@ -440,11 +441,22 @@
 		var combined = data.inputPins.concat(data.outputPins);
 		for (var i = combined.length - 1; i >= 0; i--) {
 			data.undoStack.unshift({
-				undoType: 'node',
+				undoType: 'io',
 				nid: combined[i].nid,
 			});
 		};
 		data.version = "2";
+		return data;
+	}
+
+	// version 3 unified 'node' and 'io' undo types
+	function version_2_converter(data) {
+		for (var i = data.undoStack.length - 1; i >= 0; i--) {
+			if (data.undoStack[i].undoType == 'io') {
+				data.undoStack[i].undoType = 'node';
+			}
+		};
+		data.version = "3"
 		return data;
 	}
 
@@ -455,11 +467,11 @@
 		while (data.version != latest_file_version) {
 			var converter_func = converter_map[data.version];
 			if (converter_func) {
-				console.log("Converting file from version "+data.version);
-				console.log(data);
+				// console.log("Converting file from version "+data.version);
+				// console.log(data);
 				data = converter_func(data);
-				console.log("File is now version "+data.version);
-				console.log(data);
+				// console.log("File is now version "+data.version);
+				// console.log(data);
 			} else {
 				throw "Invalid file version: "+data.version;
 			}
