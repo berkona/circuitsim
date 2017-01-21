@@ -255,7 +255,7 @@
 					error = "Input "+nid+" is shorted to output "+toNID+".";
 				}
 			}
-			circuitTraverser(circuitData, nid, 1, isShorted);
+			circuitTraverser(circuitData, nid, 0, isShorted);
 			if (error) break;
 		}
 		return error;
