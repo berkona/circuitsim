@@ -42,6 +42,7 @@
 			[ root.shortCheck, 'Short Check' ],
 			[ root.inputShort, 'Input Short' ],
 			[ root.gateShort, 'Gate Short' ],
+			[ root.ioShort, 'IO Short' ],
 		];
 
 		for (var i = 0; i < allChecks.length; i++) {
