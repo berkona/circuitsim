@@ -15,6 +15,8 @@
 	// can't use a literal b/c we want to use type names from LibCircuit
 	var transistor_types = {}
 
+	var deleteMode = false;
+
 	transistor_types[LibCircuit.pmosType] = {
 		src: "pmos.png",
 		text_pos: [5, 5],
@@ -407,13 +409,32 @@
 	var lastClickedNode = null;
 	var clickBox = 20;
 
-	function canvas_click_handler (evt) {
-		evt.preventDefault();
+	function handle_delete(pos) {
+		var closest_node = circuitData.closestNode(pos, clickBox);
+		if (!closest_node) {
+			console.warn("Could not find closest node");
+		} else {
+			var rect = circuitData.getNode(closest_node).rect;
+			circuitData.deleteNode(closest_node);
+			circuitDrawer.deleteNode(rect);
+			circuitDrawer.renderIO();
+			circuitDrawer.renderEdges();
+		}
+	}
 
-		var pos = window_to_canvas(edgeLayer, evt.clientX, evt.clientY);
+	expose(enable_delete_mode_action, 'enable_delete_mode_action');
+	function enable_delete_mode_action() {
+		deleteMode = true;
+		show_panel("#delete-panel");
+	}
 
-		// console.log("User clicked at: "+pos.x+", "+pos.y);
+	expose(disable_delete_mode_action, 'disable_delete_mode_action');
+	function disable_delete_mode_action() {
+		deleteMode = false;
+		hide_panel("#delete-panel");
+	}
 
+	function handle_pin_connect(pos) {
 		var closest_pin = circuitData.closestPin(pos, clickBox);
 
 		if (lastClickedNode) {
@@ -423,7 +444,7 @@
 			if (closest_pin) {
 				circuitData.addEdge(lastClickedNode, closest_pin);
 				circuitDrawer.renderEdges();
-			} else {
+			} else if (!circuitData.pointIntersects(pos)) {
 				pos = snap_to_canvas(pos, 10, 10);
 				var nid = circuitData.addWire(lastClickedNode, pos);
 				circuitDrawer.renderNode(circuitData.getNode(nid));
@@ -436,6 +457,20 @@
 		} else { // !lastClickedNode && closest_pin
 			lastClickedNode = closest_pin
 			uiLayer.addEventListener("mousemove", wire_draw_handler);
+		}
+	}
+
+	function canvas_click_handler (evt) {
+		evt.preventDefault();
+
+		var pos = window_to_canvas(edgeLayer, evt.clientX, evt.clientY);
+
+		// console.log("User clicked at: "+pos.x+", "+pos.y);
+
+		if (deleteMode) {
+			handle_delete(pos);
+		} else {
+			handle_pin_connect(pos);
 		}
 	}
 

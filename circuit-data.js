@@ -1,4 +1,6 @@
 
+"use strict";
+
 (function () {
 
 	// handles data book-keeping for Circuits, can be exported to json-able file
@@ -20,6 +22,88 @@
 		return this.outputPins.map(function (x) {
 			return x.name;
 		});
+	}
+
+	CircuitData.prototype.deleteEdge = function(fromNID, fromPID, toNID, toPID) {
+		var self = this;
+
+		function removeEdge(nid, pid, target_nid, target_pid) {
+			var adj = self.adjPins(nid, pid);
+			var toIdx = -1;
+			for (var i = adj.length - 1; i >= 0; i--) {
+				if (target_nid == adj[i][0] && target_pid == adj[i][1]) {
+					toIdx = i;
+					break;
+				}
+			}
+
+			if (toIdx != -1) {
+				adj.splice(toIdx, 1);
+			} else {
+				console.warn("Could not find edge for deletion, did it exist in graph?");
+			}
+		}
+
+		removeEdge(fromNID, fromPID, toNID, toPID);
+		removeEdge(toNID, toPID, fromNID, fromPID);
+	}
+
+	CircuitData.prototype.deleteNode = function(nid) {
+		var type = this.graph[nid].type;
+		
+		// a bit of special handling for deleting io pins
+		if (type == LibCircuit.inputType || type == LibCircuit.outputType) {
+			var idx;
+			var io_lists = [ this.inputPins, this.outputPins ]
+			for (var i = io_lists.length - 1; i >= 0; i--) {
+				idx = io_lists[i].map(function (x) {
+					return x.nid;
+				}).indexOf(nid);
+
+				if (idx != -1) {
+					io_lists[i].splice(idx, 1);
+					break;
+				}
+			};
+			if (idx == -1)
+				console.warn("Could not delete io pin "+nid+" from inputPins/outputPins");
+		}
+
+		delete this.graph[nid];
+
+		// TODO figure out better way to perform edge deletion
+		var edgesToDelete = [];
+		for (var toNID in this.graph) {
+			var node = this.graph[toNID];
+			for (var i = node.pins.length - 1; i >= 0; i--) {
+				var pin = node.pins[i];
+				for (var j = pin.adj.length - 1; j >= 0; j--) {
+					if (pin.adj[j][0] == nid)
+						edgesToDelete.push([toNID, i, j]);
+				}
+			}
+		}
+
+		for (var i = edgesToDelete.length - 1; i >= 0; i--) {
+			var tuple = edgesToDelete[i];
+			var toNID = tuple[0];
+			var toPID = tuple[1];
+			var adjIdx = tuple[2];
+			this.adjPins(toNID, toPID).splice(adjIdx, 1);
+		};
+
+		// see if we need to delete from undo stack
+		var idx = -1;
+		for (var i = this.undoStack.length - 1; i >= 0; i--) {
+			var data = this.undoStack[i];
+			if (data.undoType == 'node' && data.nid == nid) {
+				idx = i;
+				break;
+			}
+		};
+
+		if (idx != -1)
+			this.undoStack.splice(idx, 1);
 	}
 
 	// special handling for IO b/c we don't have images/typedefs for them
@@ -55,7 +139,7 @@
 		})
 
 		this.undoStack.push({
-			undoType: 'io',
+			undoType: 'node',
 			nid: nid,
 		});
 
@@ -256,6 +340,15 @@
 		return this._intersects(polyline, polyline_intersects, ignore_list);
 	}
 
+	CircuitData.prototype.closestNode = function(pos, maxDist) {
+		for (var nid in this.graph) {
+			var node = this.graph[nid];
+			if (point_intersects(pos, node.rect)) {
+				return nid;
+			}
+		}
+	}
+
 	CircuitData.prototype.closestPin = function(pos, maxDist) {
 		var closest_pin;
 
@@ -293,73 +386,13 @@
 		var undoRect = null;
 
 		// perform node deletion
-		if (data.undoType == 'node' || data.undoType == 'io') {
+		if (data.undoType == 'node') {
 			undoRect = this.graph[data.nid].rect;
-			delete this.graph[data.nid];
-
-			// TODO figure out better way to perform edge deletion
-			var edgesToDelete = [];
-			for (var nid in this.graph) {
-				var node = this.graph[nid];
-				for (var i = node.pins.length - 1; i >= 0; i--) {
-					var pin = node.pins[i];
-					for (var j = pin.adj.length - 1; j >= 0; j--) {
-						if (pin.adj[j] == nid)
-							edgesToDelete.push([nid, i, j]);
-					}
-				}
-			}
-
-			for (var i = edgesToDelete.length - 1; i >= 0; i--) {
-				var tuple = edgesToDelete[i];
-				var nid = tuple[0];
-				var pid = tuple[1];
-				var adjIdx = tuple[2];
-				this.adjPins(nid, pid).splice(adjIdx, 1);
-			};
-
-			// a bit of special handling for deleting io pins
-			if (data.undoType == 'io') {
-				var idx;
-				var io_lists = [ this.inputPins, this.outputPins ]
-				for (var i = io_lists.length - 1; i >= 0; i--) {
-					idx = io_lists[i].map(function (x) {
-						return x.nid;
-					}).indexOf(data.nid);
-
-					if (idx != -1) {
-						io_lists[i].splice(idx, 1);
-						break;
-					}
-				};
-				if (idx == -1)
-					console.warn("Could not delete io pin "+data.nid+" from inputPins/outputPins");
-			}
+			this.deleteNode(data.nid);
 		}
 		// perform edge deletion
 		else if (data.undoType == 'edge') {
-			var self = this;
-
-			function removeEdge(nid, pid, target_nid, target_pid) {
-				var adj = self.adjPins(nid, pid);
-				var toIdx = -1;
-				for (var i = adj.length - 1; i >= 0; i--) {
-					if (target_nid == adj[i][0] && target_pid == adj[i][1]) {
-						toIdx = i;
-						break;
-					}
-				}
-
-				if (toIdx != -1) {
-					adj.splice(toIdx, 1);
-				} else {
-					console.warn("Could not find pin for undo deletion, this should not happen");
-				}
-			}
-
-			removeEdge(data.fromId, data.fromPin, data.toId, data.toPin);
-			removeEdge(data.toId, data.toPin, data.fromId, data.fromPin);
-
+			this.deleteEdge(data.fromId, data.fromPin, data.toId, data.toPin);
 		} else {
 			console.warn("Unknown undo type in undo stack");
 		}
