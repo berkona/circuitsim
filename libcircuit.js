@@ -244,6 +244,23 @@
 		return error;
 	}
 
+	// test if input is shorted to an output
+	root.ioShort = function(circuitData) {
+		var error = null;
+		for (var nid in circuitData) {
+			var node = circuitData[nid];
+			if (node.type != inputType) continue;
+			function isShorted(toNID, toPID) {
+				if (circuitData[toNID].type == outputType) {
+					error = "Input "+nid+" is shorted to output "+toNID+".";
+				}
+			}
+			circuitTraverser(circuitData, nid, 1, isShorted);
+			if (error) break;
+		}
+		return error;
+	}
+
 	function simulateInputs(circuitData, inputMap) {
 
 		//propogate all inputs
