@@ -123,9 +123,21 @@
 	<strong>Click on node to delete or click button to cancel delete mode.</strong>
 </div>
 
+<div id="delete-confirm-panel" class="hidden container alert alert-danger alert-dismissible" role="alert">
+	<div class="col-md-12">
+		<p><strong>Are you sure you want to delete this node? This cannot be undone and will delete all edges connected to this node.</strong></p>
+	</div>
+	<div class="col-md-6">
+		<button type="button" class="btn btn-danger btn-md" aria-label="Ok" onclick="confirm_delete_action()">Ok</button>
+	</div>
+	<div class="col-md-6">
+		<button style="float: right" type="button" class="btn btn-primary btn-md" aria-label="Cancel" onclick="hide_panel('#delete-confirm-panel')">Cancel</button>
+	</div>
+</div>
+
 <div id="clear-panel" class="hidden container alert alert-danger alert-dismissible" role="alert">
 	<div class="col-md-12">
-		<p><strong>Are you sure you want to clear the circuit simulator?  You will lose all unsaved progress.</strong></p>
+		<p><strong>Are you sure you want to clear the circuit simulator?  You will lose all unsaved progress and this cannot be undone.</strong></p>
 	</div>
 	<div class="col-md-6">
 		<button type="button" class="btn btn-danger btn-md" aria-label="Ok" onclick="clear_action()">Ok</button>

@@ -292,6 +292,16 @@
 		$("#export-panel textarea").text(serialized);
 	}
 
+	expose(confirm_delete_action, 'confirm_delete_action');
+	function confirm_delete_action() {
+		$("#delete-confirm-panel").addClass("hidden");
+		var rect = circuitData.getNode(deletionNode).rect;
+		circuitData.deleteNode(deletionNode);
+		circuitDrawer.deleteNode(rect);
+		circuitDrawer.renderIO();
+		circuitDrawer.renderEdges();
+	}
+
 	expose(show_panel, 'show_panel');
 	function show_panel(selector) {
 		// console.log("Showing panel: "+selector);
@@ -440,16 +450,14 @@
 	var lastClickedNode = null;
 	var clickBox = 20;
 
+	var deletionNode = null;
+
 	function handle_delete(pos) {
-		var closest_node = circuitData.closestNode(pos, clickBox);
-		if (!closest_node) {
+		deletionNode = circuitData.closestNode(pos, clickBox);
+		if (!deletionNode) {
 			console.warn("Could not find closest node");
 		} else {
-			var rect = circuitData.getNode(closest_node).rect;
-			circuitData.deleteNode(closest_node);
-			circuitDrawer.deleteNode(rect);
-			circuitDrawer.renderIO();
-			circuitDrawer.renderEdges();
+			show_panel('#delete-confirm-panel');
 		}
 	}
 
