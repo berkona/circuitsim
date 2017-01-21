@@ -100,7 +100,7 @@
 		ctx.restore();
 	}
 
-	CircuitDrawer.prototype.renderNode = function(node, img, drawText) {
+	CircuitDrawer.prototype.renderNode = function(node, img, drawText, drawBoundingBox) {
 		var pos = node.pos;
 		var ctx = this.nodeLayer.getContext("2d");
 
@@ -125,7 +125,7 @@
 			ctx.restore();
 		}
 
-		if (render_bounding_box) {
+		if (drawBoundingBox) {
 			var rect = node.rect;
 			ctx.save();
 			ctx.setLineDash([5, 5]);

@@ -47,10 +47,20 @@
 
 		for (var i = 0; i < allChecks.length; i++) {
 			var result = allChecks[i][0](circuitData);
-			if (result) return [ allChecks[i][1], result ];
+			if (result) return result;
 		}
 
 		return null;
+	}
+
+	function create_error(msg, nids) {
+		if (!nids)
+			nids = [];
+
+		return {
+			message: msg,
+			nids: nids,
+		}
 	}
 
 	// circuitData is a object as exported by CircuitData.export
@@ -74,11 +84,11 @@
 		}
 
 		if (nInputs == 0) {
-			return "Circuit does not have any inputs."
+			return create_error("Circuit does not have any inputs.")
 		} else if (nOutputs == 0) {
-			return "Circuit does not have any outputs."
+			return create_error("Circuit does not have any outputs.")
 		} else if (nInputs + nOutputs == nNodes) {
-			return "Circuit has only inputs and outputs."
+			return create_error("Circuit has only inputs and outputs.")
 		} else {
 			return null;
 		}
@@ -102,11 +112,11 @@
 		}
 
 		if (nPMOS == 0) {
-			return "Circuit does not contain any PMOS transistors.";
+			return create_error("Circuit does not contain any PMOS transistors.");
 		} else if (nNMOS == 0) {
-			return "Circuit does not contain any NMOS transistors.";
+			return create_error("Circuit does not contain any NMOS transistors.");
 		} else if (nPMOS != nNMOS) {
-			return "Circuit does not contain an equal number of PMOS and NMOS transistors.";
+			return create_error("Circuit does not contain an equal number of PMOS and NMOS transistors.");
 		} else { // nPMOS == nNMOS
 			return null;
 		}
@@ -127,9 +137,9 @@
 		}
 
 		if (nvcc == 0) {
-			return "Circuit does not contain a source node.";
+			return create_error("Circuit does not contain a source node.");
 		} else if (ngnd == 0) {
-			return "Circuit does not contain a ground node.";
+			return create_error("Circuit does not contain a ground node.");
 		} else {
 			return null;
 		}
@@ -141,7 +151,7 @@
 			var node = circuitData[nid];
 			for (var pid = node.pins.length - 1; pid >= 0; pid--) {
 				if (node.pins[pid].adj.length == 0)
-					return "Node "+nid+", pin "+pinNames[pid]+" was not connected."
+					return create_error("Node "+nid+", pin "+pinNames[pid]+" was not connected.", [ nid ])
 			};
 		}
 	}
@@ -188,7 +198,7 @@
 			var node = circuitData[nid];
 			for (var pid = node.pins.length - 1; pid >= 0; pid--) {
 				if (hasCycle(circuitData, nid, pid))
-					return "Node "+nid+", pin "+pinNames[pid]+" is shorted to itself.";
+					return create_error("Node "+nid+", pin "+pinNames[pid]+" is shorted to itself.", [ nid ]);
 			}
 		}
 		return null;
@@ -202,7 +212,7 @@
 			if (node.type != vccType) continue;
 			function isGround(toNID, toPID) {
 				if (circuitData[toNID].type == gndType)
-					error = "Source node "+node.nid+" is shorted to ground node "+toNID+".";
+					error = create_error("Source node "+nid+" is shorted to ground node "+toNID+".", [ nid, toNID ]);
 			}
 			circuitTraverser(circuitData, nid, 0, isGround);
 			if (error) break;
@@ -218,7 +228,7 @@
 			if (node.type != inputType) continue;
 			function isShorted(toNID, toPID) {
 				if (circuitData[toNID].type == inputType && nid != toNID)
-					error = "Input node "+nid+" is shorted to input node "+toNID+".";
+					error = create_error("Input node "+nid+" is shorted to input node "+toNID+".", [ nid, toNID ]);
 			}
 			circuitTraverser(circuitData, nid, 0, isShorted);
 			if (error) break;
@@ -234,9 +244,9 @@
 			if (node.type != nmosType && node.type != pmosType) continue;
 			function isShorted(toNID, toPID) {
 				if (circuitData[toNID].type == vccType) {
-					error = "Node "+nid+" has gate pin shorted to source node "+toNID+".";
+					error = create_error("Node "+nid+" has gate pin shorted to source node "+toNID+".", [ nid, toNID ]);
 				} else if (circuitData[toNID].type == gndType) {
-					error = "Node "+nid+" has gate pin shorted to ground node "+toNID+".";
+					error = create_error("Node "+nid+" has gate pin shorted to ground node "+toNID+".", [ nid, toNID ]);
 				}
 			}
 			circuitTraverser(circuitData, nid, 1, isShorted);
@@ -253,7 +263,7 @@
 			if (node.type != inputType) continue;
 			function isShorted(toNID, toPID) {
 				if (circuitData[toNID].type == outputType) {
-					error = "Input "+nid+" is shorted to output "+toNID+".";
+					error = create_error("Input "+nid+" is shorted to output "+toNID+".", [ nid, toNID ]);
 				}
 			}
 			circuitTraverser(circuitData, nid, 0, isShorted);

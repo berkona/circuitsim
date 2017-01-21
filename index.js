@@ -156,16 +156,36 @@
 		show_output_panel();
 	}
 
+	function show_verify_error(error) {
+		$("#error-message").text(error.message);
+		$("#error-panel").removeClass("hidden");
+
+		for (var i = error.nids.length - 1; i >= 0; i--) {
+			var nid = error.nids[i];
+			var node = circuitData.getNode(nid);
+			var img = document.getElementById(node.type);
+			circuitDrawer.deleteNode(node.rect);
+			circuitDrawer.renderNode(node, img, node.type != LibCircuit.wireType, true);
+		};
+	}
+
+	function error_box_kludge() {
+		// kludge for removing error boxes
+		circuitDrawer.clear();
+		circuitDrawer.renderAll(getImageMap());
+	}
+
 	expose(verify_action, 'verify_action');
 	function verify_action() {
 		$("#error-panel").addClass("hidden");
 		$("#success-panel").addClass("hidden");
 
+		error_box_kludge()
+
 		var result = LibCircuit.runAllChecks(circuitData.graph);
 		
 		if (result) {
-			$("#error-message").text(result[1]);
-			$("#error-panel").removeClass("hidden");
+			show_verify_error(result);
 		} else {
 			$("#success-panel").removeClass("hidden");
 		}
@@ -176,10 +196,11 @@
 		$("#error-panel").addClass("hidden");
 		$("#success-panel").addClass("hidden");
 
+		error_box_kludge();
+
 		var verifyResult = LibCircuit.runAllChecks(circuitData.graph);
 		if (verifyResult) {
-			$("#error-message").text(verifyResult[1]);
-			$("#error-panel").removeClass("hidden");
+			show_verify_error(verifyResult);
 			return;
 		}
 
@@ -278,24 +299,34 @@
 		$(selector).removeClass("hidden");
 	}
 
+	function getImageMap() {
+		var imageMap = {};
+		for (var type in transistor_types) {
+			var img = document.getElementById(type);
+			imageMap[type] = img;
+		}
+		return imageMap;
+	}
+
 	expose(import_action, 'import_action');
 	function import_action() {
 		try {
 			var serialized = $("#import-panel textarea").val();
+			
 			// console.log("Serialized data received:");
 			// console.log(serialized);
+			
 			var data = JSON.parse(serialized);
+			
 			// console.log("Import data from text");
 			// console.log(data);
+			
 			circuitData.clear();
-			circuitDrawer.clear();
 			circuitData.import(data);
-			var imageMap = {};
-			for (var type in transistor_types) {
-				var img = document.getElementById(type);
-				imageMap[type] = img;
-			}
-			circuitDrawer.renderAll(imageMap);
+
+			circuitDrawer.clear();
+			circuitDrawer.renderAll(getImageMap());
+			
 			io_changed();
 			$("#import-success-panel").removeClass("hidden");
 		} catch (e) {
