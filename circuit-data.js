@@ -231,6 +231,16 @@
 		// console.log("Adding edge from ("+fromId+","+fromPin+") to ("+toId+","+toPin+")");
 
 		var fromNode = this.graph[fromId];
+		
+		// check if edge is redundant, since all edges are symmetric we only need to check fromNode's adj
+		for (var i = fromNode.pins[fromPin].adj.length - 1; i >= 0; i--) {
+			var tuple = fromNode.pins[fromPin].adj[i];
+			if (tuple[0] == toId && tuple[1] == toPin) {
+				console.log("Got redundant edge, ignoring");
+				return;
+			}
+		};
+
 		fromNode.pins[fromPin].adj.push(toTuple);
 
 		var toNode = this.graph[toId];
