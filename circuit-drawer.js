@@ -100,6 +100,11 @@
 		ctx.restore();
 	}
 
+	CircuitDrawer.prototype.updateNode = function(node, img, drawText, drawBoundingBox) {
+		this.deleteNode(node.rect);
+		this.renderNode(node, img, drawText, drawBoundingBox);
+	}
+
 	CircuitDrawer.prototype.renderNode = function(node, img, drawText, drawBoundingBox) {
 		var pos = node.pos;
 		var ctx = this.nodeLayer.getContext("2d");

@@ -56,9 +56,34 @@
 
 	var template_dir = "templates/"
 
-	//$(document).ready(load_doc)
+	$(document).ready(load_doc)
 	// use window.onload not ready, because some of the images might not be ready
-	$(window).on("load", load_doc)
+	$(window).on("load", load_template)
+
+	function load_template() {
+		var template = getUrlParameter('template')
+		if (template) {
+			// sanitize template param so it only contains \w+.\w+
+			var santizeRegex = /[^A-Za-z0-9_.]/
+			template = template.replace(santizeRegex, '')
+
+			// make sure we don't have any funny business going on
+			var isSantized = /\w+.\w+/.test(template)
+
+			if (isSantized) {
+				// make an ajax query to get file data
+				$.getJSON(template_dir + template, function (data) {
+					circuitData.clear();
+					circuitData.import(data);
+
+					circuitDrawer.clear();
+					circuitDrawer.renderAll(getImageMap());
+					
+					io_changed();
+				});
+			}
+		}
+	}
 
 	// actually loads and draws what needs to be drawn
 	function load_doc() {
@@ -86,29 +111,6 @@
 		render_complete_grid();
 		show_transistor_panel();
 		show_input_panel();
-
-		var template = getUrlParameter('template')
-		if (template) {
-			// sanitize template param so it only contains \w+.\w+
-			var santizeRegex = /[^A-Za-z0-9_.]/
-			template = template.replace(santizeRegex, '')
-
-			// make sure we don't have any funny business going on
-			var isSantized = /\w+.\w+/.test(template)
-
-			if (isSantized) {
-				// make an ajax query to get file data
-				$.getJSON(template_dir + template, function (data) {
-					circuitData.clear();
-					circuitData.import(data);
-
-					circuitDrawer.clear();
-					circuitDrawer.renderAll(getImageMap());
-					
-					io_changed();
-				});
-			}
-		}
 	}
 
 	function expose(func, name) {
@@ -324,8 +326,8 @@
 	expose(confirm_delete_action, 'confirm_delete_action');
 	function confirm_delete_action() {
 		$("#delete-confirm-panel").addClass("hidden");
-		var rect = circuitData.getNode(deletionNode).rect;
-		circuitData.deleteNode(deletionNode);
+		var rect = circuitData.getNode(deletionNID).rect;
+		circuitData.deleteNode(deletionNID);
 		circuitDrawer.deleteNode(rect);
 		circuitDrawer.renderIO();
 		circuitDrawer.renderEdges();
@@ -479,13 +481,18 @@
 	var lastClickedNode = null;
 	var clickBox = 20;
 
-	var deletionNode = null;
+	var deletionNID = null;
+	var destinationDeletionNode = null;
 
 	function handle_delete(pos) {
-		deletionNode = circuitData.closestNode(pos, clickBox);
-		if (!deletionNode) {
+		deletionNID = circuitData.closestNode(pos, clickBox);
+		if (!deletionNID) {
 			console.warn("Could not find closest node");
 		} else {
+			var node = circuitData.getNode(deletionNID);
+			var typeId = node.type
+			var img = document.getElementById(typeId);
+			circuitDrawer.updateNode(node, img, typeId != LibCircuit.wireType, true);
 			show_panel('#delete-confirm-panel');
 		}
 	}
@@ -500,6 +507,15 @@
 	function disable_delete_mode_action() {
 		deleteMode = false;
 		hide_panel("#delete-panel");
+	}
+
+	expose(cancel_delete_action, 'cancel_delete_action');
+	function cancel_delete_action() {
+		var node = circuitData.getNode(deletionNID);
+		var typeId = node.type
+		var img = document.getElementById(typeId);
+		circuitDrawer.updateNode(node, img, typeId != LibCircuit.wireType, false);
+		hide_panel('#delete-confirm-panel');
 	}
 
 	function handle_pin_connect(pos) {
