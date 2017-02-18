@@ -53,8 +53,11 @@
 		]
 	}
 
+	var template_dir = "templates/"
+
 	$(document).ready(load_doc)
 
+	// actually loads and draws what needs to be drawn
 	function load_doc() {
 		nodeLayer = document.getElementById('node-layer');
 		edgeLayer = document.getElementById('edge-layer');
@@ -80,6 +83,31 @@
 		render_complete_grid();
 		show_transistor_panel();
 		show_input_panel();
+
+		var template = getUrlParameter('template')
+		if (template) {
+			// sanitize template param so it only contains \w+.\w+
+			santizeRegex = /[^A-Za-z0-9.]/
+			template = template.replace(santizeRegex, '')
+
+			// make sure we don't have any funny business going on
+			isSantized = /\w+.\w+/.test(template)
+
+			if (isSantized) {
+				// make an ajax query to get file data
+				$.get(template_dir + template, function (data) {
+					data = JSON.parse(data);
+					
+					circuitData.clear();
+					circuitData.import(data);
+
+					circuitDrawer.clear();
+					circuitDrawer.renderAll(getImageMap());
+					
+					io_changed();
+				});
+			}
+		}
 	}
 
 	function expose(func, name) {
@@ -539,5 +567,21 @@
 
 		ctx.restore();
 	}
+
+	// simple URL parsing script courtesy of Sameer Kazi @ http://stackoverflow.com/questions/19491336/get-url-parameter-jquery-or-how-to-get-query-string-values-in-js
+	function getUrlParameter(sParam) {
+	    var sPageURL = decodeURIComponent(window.location.search.substring(1)),
+	        sURLVariables = sPageURL.split('&'),
+	        sParameterName,
+	        i;
+
+	    for (i = 0; i < sURLVariables.length; i++) {
+	        sParameterName = sURLVariables[i].split('=');
+
+	        if (sParameterName[0] === sParam) {
+	            return sParameterName[1] === undefined ? true : sParameterName[1];
+	        }
+	    }
+	};
 
 })();
