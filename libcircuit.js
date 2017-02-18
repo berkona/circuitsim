@@ -2,7 +2,7 @@
 
 (function() {
 
-	var root = this;
+	var root = {};
 
 	var inputType = 'input';
 	var outputType = 'output';
