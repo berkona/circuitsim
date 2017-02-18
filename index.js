@@ -1,3 +1,4 @@
+"use strict";
 
 (function () {
 
@@ -55,7 +56,9 @@
 
 	var template_dir = "templates/"
 
-	$(document).ready(load_doc)
+	//$(document).ready(load_doc)
+	// use window.onload not ready, because some of the images might not be ready
+	$(window).on("load", load_doc)
 
 	// actually loads and draws what needs to be drawn
 	function load_doc() {
@@ -87,17 +90,15 @@
 		var template = getUrlParameter('template')
 		if (template) {
 			// sanitize template param so it only contains \w+.\w+
-			santizeRegex = /[^A-Za-z0-9.]/
+			var santizeRegex = /[^A-Za-z0-9_.]/
 			template = template.replace(santizeRegex, '')
 
 			// make sure we don't have any funny business going on
-			isSantized = /\w+.\w+/.test(template)
+			var isSantized = /\w+.\w+/.test(template)
 
 			if (isSantized) {
 				// make an ajax query to get file data
-				$.get(template_dir + template, function (data) {
-					data = JSON.parse(data);
-					
+				$.getJSON(template_dir + template, function (data) {
 					circuitData.clear();
 					circuitData.import(data);
 
