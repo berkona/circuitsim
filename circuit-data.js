@@ -4,13 +4,21 @@
 (function () {
 
 	// handles data book-keeping for Circuits, can be exported to json-able file
-	function CircuitData() {
+	function CircuitData(simType) {
+		// for compatibility with legacy code
+		if (simType === undefined)
+			simType = CircuitData.SIM_TYPE_TRANSISTOR;
+
 		this.undoStack = [];
 		this.graph = {};
 		this.inputPins = [];
 		this.outputPins = [];
 		this.nNodes = 0;
+		this.simType = simType;
 	}
+
+	CircuitData.SIM_TYPE_TRANSISTOR = "transistor";
+	CircuitData.SIM_TYPE_GATE = "gate";
 
 	CircuitData.prototype.getInputNames = function() {
 		return this.inputPins.map(function (x) {
@@ -146,7 +154,7 @@
 		return nid;
 	}
 
-	var wireSize = 5;
+	var wireSize = 8;
 
 	CircuitData.prototype.addWire = function(fromTuple, pos) {
 		var nid = String(this.nNodes++);
@@ -429,12 +437,13 @@
 		return data;
 	}
 
-	var latest_file_version = "3";
+	var latest_file_version = "4";
 
 	var converter_map = {
 		"0": version_0_converter,
 		"1": version_1_converter,
 		"2": version_2_converter,
+		"3": version_3_converter,
 	};
 
 	// version 1 reduces file size by removing redundant data
@@ -469,6 +478,15 @@
 		data.version = "3"
 		return data;
 	}
+
+	// version 4 adds a type to CircuitData which distinguishes between transistor and gate graphs
+	function version_3_converter(data) {
+		// everything before version 3 was a transistor type
+		data.simType = CircuitData.SIM_TYPE_TRANSISTOR
+		data.version = "4"
+		return data;
+	}
+
 
 	CircuitData.prototype.import = function(data) {
 		if (!data.version)

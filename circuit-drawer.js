@@ -15,6 +15,12 @@
 		this.ioStopX = gridSize - pinRadius;
 	}
 
+	// direction is an int: 0 = draw to left, 1 = draw to right, 2 = draw upwards, 3 = draw downwards
+	CircuitDrawer.DIR_LEFT = 0;
+	CircuitDrawer.DIR_RIGHT = 1;
+	CircuitDrawer.DIR_UP = 2;
+	CircuitDrawer.DIR_DOWN = 3;
+
 	CircuitDrawer.prototype.renderAll = function(types) {
 		this.renderIO();
 		this.renderEdges();
@@ -86,9 +92,13 @@
 
 				node.pins[0].pos = { x: pinX, y: y };
 
+				ctx.save();
 				ctx.beginPath();
 				ctx.arc(pinX, y, self.pinRadius, 0, 2 * Math.PI);
+				ctx.fillStyle = "#000";
+				ctx.fill();
 				ctx.stroke();
+				ctx.restore();
 
 				ctx.save();
 				ctx.font = "10px sans";
@@ -105,6 +115,27 @@
 		this.renderNode(node, img, drawText, drawBoundingBox);
 	}
 
+	CircuitDrawer.prototype.pinOffset = function(pin_pos) {
+		var pinRadius = this.pinRadius;
+		var x_offset = 0;
+		var y_offset = 0;
+		if (pin_pos.direction == CircuitDrawer.DIR_LEFT) {
+			x_offset = -pinRadius;
+		} else if (pin_pos.direction == CircuitDrawer.DIR_RIGHT) {
+			x_offset = pinRadius;
+		} else if (pin_pos.direction == CircuitDrawer.DIR_UP) {
+			y_offset = -pinRadius;
+		} else if (pin_pos.direction == CircuitDrawer.DIR_DOWN) {
+			y_offset = pinRadius;
+		} else {
+			console.warn("CircuitDrawer.renderNode() got unknown pin direction.  Please report this to web-admin with a console dump.");
+		}
+		return {
+			x: pin_pos.x + x_offset,
+			y: pin_pos.y + y_offset,
+		}
+	}
+
 	CircuitDrawer.prototype.renderNode = function(node, img, drawText, drawBoundingBox) {
 		var pos = node.pos;
 		var ctx = this.nodeLayer.getContext("2d");
@@ -113,15 +144,21 @@
 			ctx.drawImage(img, pos.x, pos.y);
 		}
 
-		for (var i = node.pins.length - 1; i >= 0; i--) {
-			var pin = node.pins[i];
+		// for (var i = node.pins.length - 1; i >= 0; i--) {
+		// 	var pin = node.pins[i];
 
-			// update pin.pos
+		// 	// update pin.pos
+		// 	ctx.save();
+		// 	ctx.beginPath();
+		// 	ctx.strokeStyle = "#A22";
+		// 	ctx.lineWidth = 1;
+		// 	ctx.moveTo(pin.pos.x, pin.pos.y);
 
-			ctx.beginPath();
-			ctx.arc(pin.pos.x, pin.pos.y, this.pinRadius, 0, 2 * Math.PI);
-			ctx.stroke();
-		};
+		// 	offset = this.pinOffset(pin.pos, this.pinRadius);
+		// 	ctx.lineTo(offset.x, offset.y);
+		// 	ctx.stroke();
+		// 	ctx.restore();
+		// };
 
 		if (drawText) {
 			ctx.save();
@@ -247,6 +284,8 @@
 			path = simple_route_wire(fromPos, toPos, circuitData, fromID, toID);
 		}
 
+		ctx.save();
+		ctx.lineWidth = 1;
 		ctx.beginPath();
 		for (var i = 0; i < path.length-1; i++) {
 			var u = path[i];
@@ -255,6 +294,7 @@
 			ctx.lineTo(v.x, v.y);
 		};
 		ctx.stroke();
+		ctx.restore();
 	}
 
 	CircuitDrawer.prototype._renderEdges = function() {
@@ -282,8 +322,11 @@
 					var toPin = this.circuitData.getPin(toID, toPinId);
 
 					if (alreadyRendered(from, to)) continue;
-
-					render_wire(ctx, pin.pos, toPin.pos, this.circuitData, nid, toID, this.min, this.max, this.gridSize);
+					fromOffset = pin.pos;
+					toOffset = toPin.pos;
+					//fromOffset = this.pinOffset(pin.pos, this.pinRadius);
+					//toOffset = this.pinOffset(toPin.pos, this.pinRadius);
+					render_wire(ctx, fromOffset, toOffset, this.circuitData, nid, toID, this.min, this.max, this.gridSize);
 
 					rendered_set[edgeId(from, to)] = true;
 				}

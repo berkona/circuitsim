@@ -19,41 +19,102 @@
 	var deleteMode = false;
 
 	transistor_types[LibCircuit.pmosType] = {
-		src: "pmos.png",
+		src: "images/pmos.png",
 		text_pos: [5, 5],
 		pins: [
-			[39, -1],
-			[-1, 22],
-			[39, 47],
+			[39, 2 ],
+			[1, 22 ],
+			[39, 42 ],
 		],
 	}
 
 	transistor_types[LibCircuit.nmosType] = {
-		src: "nmos.png",
+		src: "images/nmos.png",
 		text_pos: [5, 5],
 		pins: [
-			[39, -1],
-			[-1, 23],
-			[39, 47],
+			[39, 2 ],
+			[1, 22 ],
+			[39, 42 ],
 		]
 	}
 
 	transistor_types[LibCircuit.vccType] = {
-		src: "vcc.png",
+		src: "images/vcc.png",
 		text_pos: [5, 26],
 		pins: [
-			[41, 17],
+			[40, 17],
 		]
 	}
 
 	transistor_types[LibCircuit.gndType] = {
-		src: "gnd.png",
+		src: "images/gnd.png",
 		text_pos: [5, 26],
 		pins: [
-			[41, 17],
+			[40, 17],
 		]
 	}
 
+	var gate_types = {};
+
+	gate_types[LibCircuit.andType] = {
+		src: "images/and.png",
+		text_pos: [40, 26],
+		pins: [
+			[1, 12  ],
+			[95, 22 ],
+			[1, 30  ],
+		],
+	};
+
+	gate_types[LibCircuit.nandType] = {
+		src: "images/nand.png",
+		text_pos: [40, 26],
+		pins: [
+			[1, 12  ],
+			[95, 22 ],
+			[1, 30  ],
+		],
+	};
+
+	gate_types[LibCircuit.orType] = {
+		src: "images/or.png",
+		text_pos: [40, 26],
+		pins: [
+			[1, 12  ],
+			[95, 22 ],
+			[1, 30  ],
+		],
+	};
+
+	gate_types[LibCircuit.norType] = {
+		src: "images/nor.png",
+		text_pos: [40, 26],
+		pins: [
+			[1, 12  ],
+			[95, 22 ],
+			[1, 30  ],
+		],
+	};
+
+	// gate_types[LibCircuit.xorType] = {
+	// 	src: "images/xor.png",
+	// 	text_pos: [40, 26],
+	// 	pins: [
+	// 		[1, 12],
+	// 		[95, 22],
+	// 		[1, 30],
+	// 	],
+	// };
+
+	gate_types[LibCircuit.inverterType] = {
+		src: "images/inverter.png",
+		text_pos: [30, 26],
+		pins: [
+			[1, 22  ],
+			[95, 22 ],
+		],
+	};
+	
 	var template_dir = "templates/"
 
 	$(document).ready(load_doc)
@@ -109,6 +170,11 @@
 		circuitDrawer = new CircuitDrawer(nodeLayer, edgeLayer, circuitData, min, max, gridSize, connectionNodeRadius);
 
 		render_complete_grid();
+
+		// starts loading our images, we have to wait until they are loaded to call load_template
+		load_transistor_panel();
+		load_gate_panel();
+
 		show_transistor_panel();
 		show_input_panel();
 	}
@@ -117,18 +183,46 @@
 		window[name] = func;
 	}
 
-	function show_transistor_panel () {
-		$("#transitor-panel-tabs li").removeClass("active");
-		$("#transitor-panel-t-tab").addClass("active");
-
-		var tp = $("#transistor-panel");
+	function load_transistor_panel() {
+		var tp = $("#transistor-panel-t");
 		tp.empty();
 		for (var id in transistor_types) {
 			var typedef = transistor_types[id];
-			var ele = $('<img id="'+id+'" src="'+typedef.src+'" class="drag-icon col-md-3" draggable="true"></img>');
+			var ele = $('<img id="'+id+'" src="'+typedef.src+'" class="drag-panel drag-icon col-md-3" draggable="true"></img>');
 			ele.on('dragstart', drag_handler);
 			tp.append(ele);
 		};
+	}
+
+	function load_gate_panel() {
+		var tp = $("#transistor-panel-g");
+		tp.empty();
+		for (var id in gate_types) {
+			var typedef = gate_types[id];
+			var ele = $('<img id="'+id+'" src="'+typedef.src+'" class="drag-panel drag-icon col-md-3" draggable="true"></img>');
+			ele.on('dragstart', drag_handler);
+			tp.append(ele);
+		}
+	}
+
+	// expose(show_transistor_panel, "show_transistor_panel");
+	function show_transistor_panel () {
+		// show/hide relevant tabs
+		$("#transitor-panel-tabs li").addClass("hidden");
+		$("#transitor-panel-t-tab").removeClass("hidden");
+
+		$("#transistor-panel-t").removeClass("hidden");
+		$("#transistor-panel-g").addClass("hidden");
+	}
+
+	// expose(show_gate_panel, "show_gate_panel");
+	function show_gate_panel () {
+		// show/hide relevant tabs
+		$("#transitor-panel-tabs li").addClass("hidden");
+		$("#transitor-panel-g-tab").removeClass("hidden");
+
+		$("#transistor-panel-t").addClass("hidden");
+		$("#transistor-panel-g").removeClass("hidden");
 	}
 
 	function add_pin_names(arr, addEventHandler) {
@@ -206,6 +300,27 @@
 		circuitDrawer.renderAll(getImageMap());
 	}
 
+	expose(confirm_change_mode_action, "confirm_change_mode_action");
+	function confirm_change_mode_action() {
+		var sim_type;
+		if (circuitData.simType == CircuitData.SIM_TYPE_TRANSISTOR) {
+			sim_type = CircuitData.SIM_TYPE_GATE;
+			show_gate_panel();
+		} else if (circuitData.simType == CircuitData.SIM_TYPE_GATE) {
+			sim_type = CircuitData.SIM_TYPE_TRANSISTOR;
+			show_transistor_panel();
+		} else {
+			return console.warn("Invalid mode on confirm_change_mode_action().  Please report this error to the web-admin along with a console dump.");
+		}
+
+		circuitData.clear();
+		circuitDrawer.clear();
+		circuitData.simType = sim_type;
+		io_changed();
+
+		hide_panel("#change-mode-panel");
+	}
+
 	expose(verify_action, 'verify_action');
 	function verify_action() {
 		$("#error-panel").addClass("hidden");
@@ -213,8 +328,13 @@
 
 		error_box_kludge()
 
-		var result = LibCircuit.runAllChecks(circuitData.graph);
-		
+		var result;
+		if (circuitData.simType == CircuitData.SIM_TYPE_TRANSISTOR) {
+			result = LibCircuit.runTransistorChecks(circuitData.graph);
+		} else {
+			result = LibCircuit.runGateChecks(circuitData.graph);
+		}
+
 		if (result) {
 			show_verify_error(result);
 		} else {
@@ -229,13 +349,23 @@
 
 		error_box_kludge();
 
-		var verifyResult = LibCircuit.runAllChecks(circuitData.graph);
+		var verifyResult;
+		if (circuitData.simType == CircuitData.SIM_TYPE_TRANSISTOR) {
+			verifyResult = LibCircuit.runTransistorChecks(circuitData.graph);
+		} else {
+			verifyResult = LibCircuit.runGateChecks(circuitData.graph);
+		}
 		if (verifyResult) {
 			show_verify_error(verifyResult);
 			return;
 		}
 
-		var result = LibCircuit.simulate(circuitData.graph);
+		var result;
+		if (circuitData.simType == CircuitData.SIM_TYPE_TRANSISTOR) {
+			result = LibCircuit.simulate(circuitData.graph);
+		} else {
+			result = LibCircuit.simulateGates(circuitData.graph);
+		}
 
 		console.log("Simulate result:");
 		console.log(result);
@@ -342,7 +472,16 @@
 
 	function getImageMap() {
 		var imageMap = {};
-		for (var type in transistor_types) {
+		var typedefs;
+		if (circuitData.simType == CircuitData.SIM_TYPE_TRANSISTOR) {
+			typedefs = transistor_types;
+		} else if (circuitData.simType == CircuitData.SIM_TYPE_GATE) {
+			typedefs = gate_types;
+		} else {
+			return console.warn("Invalid simType in getImageMap.  Please report this to web-admin with console dump.");
+		}
+
+		for (var type in typedefs) {
 			var img = document.getElementById(type);
 			imageMap[type] = img;
 		}
@@ -364,6 +503,14 @@
 			
 			circuitData.clear();
 			circuitData.import(data);
+
+			if (circuitData.simType == CircuitData.SIM_TYPE_TRANSISTOR) {
+				show_transistor_panel();
+			} else if (circuitData.simType == CircuitData.SIM_TYPE_GATE) {
+				show_gate_panel();
+			} else {
+				return console.warn("Invalid mode on confirm_change_mode_action().  Please report this error to the web-admin along with a console dump.");
+			}
 
 			circuitDrawer.clear();
 			circuitDrawer.renderAll(getImageMap());
@@ -453,7 +600,15 @@
 		var pos = window_to_canvas(nodeLayer, evt.clientX, evt.clientY);
 		var typeId = evt.originalEvent.dataTransfer.getData("id");
 		var img = document.getElementById(typeId);
-		var type = transistor_types[typeId];
+
+		var type;
+		if (circuitData.simType == "transistor") {
+			type = transistor_types[typeId];
+		} else if (circuitData.simType == "gate") {
+			var type = gate_types[typeId];
+		} else {
+			return console.warn("Invalid CircuitData.simType in drop_handler().  Please report this to the web-admin along with console dump.");
+		}
 
 		// conform pos to offset when started dragging
 		pos.x = pos.x - mouse_offset.x + img.width/2; // add half width b/c centers image on mouse
@@ -479,7 +634,7 @@
 	}
 
 	var lastClickedNode = null;
-	var clickBox = 20;
+	var clickBox = 10;
 
 	var deletionNID = null;
 	var destinationDeletionNode = null;

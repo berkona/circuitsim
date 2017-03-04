@@ -26,6 +26,10 @@
 
 <style type="text/css">
 
+.drag-panel {
+	margin-bottom: 1em;
+}
+
 .page-header {
 	margin: 0px;
 }
@@ -56,7 +60,7 @@
 	cursor: move;
 }
 
-#transistor-panel {
+.transistor-panel {
 	padding-right: 0px;
 	padding-left: 0px;
 	margin-top: 10px;
@@ -105,6 +109,7 @@
 	    <!-- Collect the nav links, forms, and other content for toggling -->
 	    <div class="collapse navbar-collapse unselectable cursor-pointer" id="navbar-actions">
 	    	<ul class="nav navbar-nav">
+	    		<li><a onclick="show_panel('#change-mode-panel')">Change Mode</a></li>
 	    		<li><a onclick="show_panel('#clear-panel')">Clear</a></li>
 	    		<li><a onclick="undo_action()">Undo</a></li>
 	    		<li><a onclick="enable_delete_mode_action()">Delete</a></li>
@@ -117,6 +122,18 @@
 	</div>
 
 </nav>
+
+<div id="change-mode-panel" class="hidden container alert alert-danger alert-dismissible" role="alert">
+	<div class="col-md-12">
+		<p><strong>Are you sure you want to change circuit simulator mode?  You will lose all unsaved progress and this cannot be undone.</strong></p>
+	</div>
+	<div class="col-md-6">
+		<button type="button" class="btn btn-danger btn-md" aria-label="Ok" onclick="confirm_change_mode_action()">Ok</button>
+	</div>
+	<div class="col-md-6">
+		<button style="float: right" type="button" class="btn btn-primary btn-md" aria-label="Cancel" onclick="hide_panel('#change-mode-panel')">Cancel</button>
+	</div>
+</div>
 
 <div id="delete-panel" class="hidden container alert alert-info alert-dismissible" role="alert">
 	<button type="button" class="btn btn-info btn-xs" aria-label="Close" onclick="disable_delete_mode_action()"><span aria-hidden="true">&times;</span></button>
@@ -215,11 +232,12 @@
 		<div class="panel-body">
 			<div class="row">
 				<ul id="transitor-panel-tabs" class="nav nav-tabs cursor-pointer">
-					<li id="transitor-panel-t-tab" role="presentation" class="active"><a onclick="show_transistor_panel()">Transistors</a></li>
-				<!-- <li role="presentation"><a href="#">Gates</a></li> -->
+					<li id="transitor-panel-t-tab" role="presentation" class="active"><a>Transistors</a></li>
+					<li id="transitor-panel-g-tab" role="presentation" class="active hidden"><a>Gates</a></li>
 				</ul>
 			</div>
-			<div id="transistor-panel" class="row cursor-move"></div>
+			<div id="transistor-panel-t" class="transistor-panel row cursor-move"></div>
+			<div id="transistor-panel-g" class="transistor-panel row cursor-move"></div>
 		</div>
 	</div>
 	<div class="panel panel-default">

@@ -4,21 +4,43 @@
 
 	var root = {};
 
+	// common types
 	var inputType = 'input';
 	var outputType = 'output';
+	var wireType = 'wire';
+	
+	// transistor mode only
 	var pmosType = 'pmos';
 	var nmosType = 'nmos';
 	var vccType = 'vcc';
 	var gndType = 'gnd';
-	var wireType = 'wire';
 
+	// gate mode only
+	var andType = 'and';
+	var nandType = 'nand';
+	var orType = 'or';
+	var norType = 'nor';
+	// var xorType = 'xor';
+	var inverterType = 'inverter';
+	
+	// common types
 	root.inputType = inputType;
 	root.outputType = outputType;
+
+	// transistor mode only
 	root.pmosType = pmosType;
 	root.nmosType = nmosType;
 	root.vccType = vccType;
 	root.gndType = gndType;
 	root.wireType = wireType;
+
+	// gate mode only
+	root.andType = andType;
+	root.nandType = nandType;
+	root.orType = orType;
+	root.norType = norType;
+	// root.xorType = xorType;
+	root.inverterType = inverterType;
 
 	var pinNames = [
 		"source",
@@ -26,7 +48,51 @@
 		"drain"
 	]
 
+	var gatePinNames = [
+		"input 1",
+		"input 2",
+		"output"
+	]
+
 	root.pinNames = pinNames;
+
+	root.gatePinNames = gatePinNames;
+
+	function runChecks(circuitData, checks) {
+		for (var i = 0; i < checks.length; i++) {
+			var result = checks[i](circuitData);
+			if (result) return result;
+		};
+		return null;
+	}
+
+	// same as runAllChecks, but common to both types of CircuitData
+	root.runCommonChecks = function(circuitData) {
+		return runChecks(circuitData, [
+			root.ioCheck,
+			root.allPinsConnected,
+			root.selfShort,
+			root.inputShort,
+			root.ioShort,
+		]);
+	}
+
+	root.runTransistorChecks = function(circuitData) {
+		var result = root.runCommonChecks(circuitData);
+		if (result) return result;
+		return runChecks(circuitData, [
+			root.powerCheck,
+			root.parityCheck,
+			root.shortCheck,
+			root.gateShort,
+		]);
+	}
+
+	root.runGateChecks = function(circuitData) {
+		var result = root.runCommonChecks(circuitData);
+		if (result) return result;
+		// todo make Gate sanity checks
+	}
 
 	// this runs all checks in the order intended to be run
 	// returns either null for all good or a message if errored somewhere
@@ -289,7 +355,8 @@
 		var continueSim = true;
 		var nIterations = 0;
 		// using an 'iterative deepening' method allows for a transistor to have an input from another transistor
-		// assumes that the circuit is more than 10 levels 'deep'
+		// assumes that the circuit is no more than 10 levels 'deep' 
+		// i.e., the longest path from input to output is no more than length 10
 		while (continueSim && nIterations < 10) {
 			// propogate power values
 			for (var nid in circuitData) {
@@ -332,6 +399,124 @@
 		}
 
 		return outputMap;
+	}
+
+	var logic_table = {};
+	logic_table[inverterType] = function (a) {
+		if (!a) return null;
+		return a == '1' ? '0' : '1';
+	};
+	logic_table[andType] = function (a, b) {
+		if (!a || !b) return null;
+		return a == '1' && b == '1' ? '1' : '0';
+	};
+	logic_table[nandType] = function (a, b) {
+		if (!a || !b) return null;
+		return a == '1' && b == '1' ? '0' : '1';
+	};
+	logic_table[orType] = function (a, b) {
+		if (!a || !b) return null;
+		return a == '1' || b == '1' ? '1' : '0';
+	};
+	logic_table[norType] = function (a, b) {
+		if (!a || !b) return null;
+		return a == '1' || b == '1' ? '0' : '1';
+	};
+
+	function simulateGateNet(circuitData, inputMap) {
+		var continueSim = true, nIterations = 0;
+		while (continueSim && nIterations < 10) {
+			for (var nid in inputMap) {
+				var input = inputMap[nid];
+				var node = circuitData[nid];
+				if (node.type != inputType) {
+					console.error("Received invalid nid from inputMap, ignoring.  Please report this with a console dump to web-admin.");
+				} else {
+					propogateGateValue(nid, 0, circuitData, input);
+				}
+			}
+			
+			var allGood = true;
+			for (var nid in circuitData) {
+				var node = circuitData[nid];
+				if (node.type != outputType) continue;
+				allGood &= node.pins[0].sim_value;
+				if (!allGood) break;
+			}
+			continueSim = !allGood;
+
+			nIterations++;
+		}
+
+		// save output values
+		var outputMap = {};
+		for (var nid in circuitData) {
+			var node = circuitData[nid];
+			if (node.type == outputType) {
+				var value = node.pins[0].sim_value;
+				if (!value) value = 'Z';
+				outputMap[nid] = value;
+			}
+		}
+
+		// reset circuitData sim_values
+		for (var nid in circuitData) {
+			var node = circuitData[nid];
+			for (var i = node.pins.length - 1; i >= 0; i--) {
+				delete node.pins[i].sim_value;
+			};
+		}
+
+		return outputMap;
+	}
+
+	function propogateGateValue(nid, pid, circuitData, value, visited) {
+		if (!visited)
+			visited = {};
+
+		var node = circuitData[nid];
+		var pin = node.pins[pid];
+
+		// this prevents loops due to the symmetric edges in the graph
+		var id = nid+"-"+pid;
+		if (visited[id])
+			return;
+		visited[id] = true;
+
+		if (!pin.sim_value || (pin.sim_value && pin.sim_value == '0')) {
+			pin.sim_value = value;
+		}
+
+		if (node.type == outputType) {
+			// already done
+			return;
+		} 
+		// if an input pin on a gate
+		else if (node.type != inputType && pid != 1) {
+			var logic_func = logic_table[node.type];
+			var newValue;
+			if (node.type == inverterType) {
+				newValue = logic_func(pin.sim_value);
+			} else {
+				newValue = logic_func(node.pins[0].sim_value, node.pins[2].sim_value);
+			}
+
+			var outputAdj = node.pins[1].adj;
+			for (var i = outputAdj.length - 1; i >= 0; i--) {
+				var adj = outputAdj[i];
+				var toNID = adj[0];
+				var toPID = adj[1];
+				propogateGateValue(toNID, toPID, circuitData, newValue, visited);
+			};
+		}
+
+		var adj = pin.adj;
+		for (var i = adj.length - 1; i >= 0; i--) {
+			var n = adj[i];
+			var toNID = n[0];
+			var toPID = n[1];
+			propogateGateValue(toNID, toPID, circuitData, value, visited);
+		};
 	}
 
 	function propogateSimValue(nid, pid, circuitData, value, visited) {
@@ -393,7 +578,7 @@
 		};
 	}
 
-	root.simulate = function(circuitData) {
+	function runSimulation(circuitData, simFunc) {
 		var inputNIDList = Object.keys(circuitData).filter(function (x) {
 			return circuitData[x].type == inputType;
 		});
@@ -424,7 +609,7 @@
 			for (var j = inputNIDList.length - 1; j >= 0; j--) {
 				inputMap[inputNIDList[j]] = inputs[j];
 			};
-			var outputMap = simulateInputs(circuitData, inputMap);
+			var outputMap = simFunc(circuitData, inputMap);
 			// order is important for these loops
 			var row = [];
 			for (var j = 0; j < inputNIDList.length; j++) {
@@ -437,6 +622,14 @@
 		}
 
 		return result;
+	}
+
+	root.simulate = function(circuitData) {
+		return runSimulation(circuitData, simulateInputs);
+	}
+
+	root.simulateGates = function(circuitData) {
+		return runSimulation(circuitData, simulateGateNet);
 	}
 
 	// running in node.js
