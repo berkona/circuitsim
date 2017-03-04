@@ -208,7 +208,7 @@
 	// expose(show_transistor_panel, "show_transistor_panel");
 	function show_transistor_panel () {
 		// show/hide relevant tabs
-		$("#transitor-panel-tabs li").addClass("hidden");
+		$(".mode-message").addClass("hidden");
 		$("#transitor-panel-t-tab").removeClass("hidden");
 
 		$("#transistor-panel-t").removeClass("hidden");
@@ -218,7 +218,7 @@
 	// expose(show_gate_panel, "show_gate_panel");
 	function show_gate_panel () {
 		// show/hide relevant tabs
-		$("#transitor-panel-tabs li").addClass("hidden");
+		$(".mode-message").addClass("hidden");
 		$("#transitor-panel-g-tab").removeClass("hidden");
 
 		$("#transistor-panel-t").addClass("hidden");

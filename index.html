@@ -204,8 +204,11 @@
 	<div class="col-md-1">
 		<button type="button" class="btn btn-lg btn-info" aria-label="Import" onclick="import_action()"><span aria-hidden="true">Import</span></button>
 	</div>
-	<div class="col-md-11">
+	<div class="col-md-10">
 		<textarea style="width:100%; height:100%;"></textarea>
+	</div>
+	<div class="col-md-1">
+		<button type="button" class="btn btn-lg btn-info" aria-label="Close" onclick="hide_panel('#import-panel')"><span aria-hidden="true">&times;</span></button>
 	</div>
 </div>
 
@@ -229,14 +232,10 @@
 <div class="container">
 
 <div class="col-md-3">
+	<h3 id="transitor-panel-t-tab" class="mode-message">Mode: Transistors</h1>
+	<h3 id="transitor-panel-g-tab" class="mode-message hidden">Mode: Gates</h1>
 	<div class="panel panel-default unselectable">
 		<div class="panel-body">
-			<div class="row">
-				<ul id="transitor-panel-tabs" class="nav nav-tabs cursor-pointer">
-					<li id="transitor-panel-t-tab" role="presentation" class="active"><a>Transistors</a></li>
-					<li id="transitor-panel-g-tab" role="presentation" class="active hidden"><a>Gates</a></li>
-				</ul>
-			</div>
 			<div id="transistor-panel-t" class="transistor-panel row cursor-move"></div>
 			<div id="transistor-panel-g" class="transistor-panel row cursor-move"></div>
 		</div>
