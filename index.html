@@ -231,34 +231,34 @@
 
 <div class="container">
 
-<div class="col-md-3">
-	<h3 id="transitor-panel-t-tab" class="mode-message">Mode: Transistors</h1>
-	<h3 id="transitor-panel-g-tab" class="mode-message hidden">Mode: Gates</h1>
-	<div class="panel panel-default unselectable">
-		<div class="panel-body">
-			<div id="transistor-panel-t" class="transistor-panel row cursor-move"></div>
-			<div id="transistor-panel-g" class="transistor-panel row cursor-move"></div>
-		</div>
-	</div>
-	<div class="panel panel-default">
-		<div class="panel-body">
-			<div class="row">
-				<ul id="io-panel-tabs" class="nav nav-tabs unselectable cursor-pointer">
-					<li id="io-panel-i-tab" role="presentation" class="active"><a onclick="show_input_panel()">Inputs</a></li>
-					<li id="io-panel-o-tab" role="presentation"><a onclick="show_output_panel()">Outputs</a></li>
-				</ul>
+	<div class="col-md-3">
+		<h3 id="transitor-panel-t-tab" class="mode-message">Mode: Transistors</h1>
+		<h3 id="transitor-panel-g-tab" class="mode-message hidden">Mode: Gates</h1>
+		<div class="panel panel-default unselectable">
+			<div class="panel-body">
+				<div id="transistor-panel-t" class="transistor-panel row cursor-move"></div>
+				<div id="transistor-panel-g" class="transistor-panel row cursor-move"></div>
 			</div>
-			<div id="io-panel" class="row"></div>
+		</div>
+		<div id="io-panel-container" class="panel panel-default">
+			<div class="panel-body">
+				<div class="row">
+					<ul id="io-panel-tabs" class="nav nav-tabs unselectable cursor-pointer">
+						<li id="io-panel-i-tab" role="presentation" class="active"><a onclick="show_input_panel()">Inputs</a></li>
+						<li id="io-panel-o-tab" role="presentation"><a onclick="show_output_panel()">Outputs</a></li>
+					</ul>
+				</div>
+				<div id="io-panel" class="row"></div>
+			</div>
 		</div>
 	</div>
-</div>
 
-<div id="stage" class="col-md-9 unselectable">
-	<canvas id="background-layer" width="640" height="480"></canvas>
-	<canvas id="node-layer" width="640" height="480"></canvas>
-	<canvas id="edge-layer" width="640" height="480"></canvas>
-	<canvas id="ui-layer" width="640" height="480"></canvas>
-</div>
+	<div id="stage" class="col-md-9 unselectable">
+		<canvas id="background-layer" width="640" height="480"></canvas>
+		<canvas id="node-layer" width="640" height="480"></canvas>
+		<canvas id="edge-layer" width="640" height="480"></canvas>
+		<canvas id="ui-layer" width="640" height="480"></canvas>
+	</div>
 
 </div>
 

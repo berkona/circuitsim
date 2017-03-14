@@ -142,6 +142,13 @@
 
 		if (img) {
 			ctx.drawImage(img, pos.x, pos.y);
+		} else {
+			ctx.save();
+			ctx.beginPath();
+			ctx.arc(pos.x, pos.y, this.pinRadius, 0, 2 * Math.PI);
+			ctx.fillStyle = "#000";
+			ctx.fill();
+			ctx.restore();
 		}
 
 		// for (var i = node.pins.length - 1; i >= 0; i--) {

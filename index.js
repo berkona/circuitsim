@@ -1,8 +1,8 @@
 "use strict";
 
+// this is all ui javascript
 (function () {
 
-	// this is all ui javascript
 	var nodeLayer, backgroundLayer, edgeLayer, uiLayer;
 
 	var gridSize = 20;
@@ -167,7 +167,14 @@
 		}
 
 		circuitData = new CircuitData();
-		circuitDrawer = new CircuitDrawer(nodeLayer, edgeLayer, circuitData, min, max, gridSize, connectionNodeRadius);
+		circuitDrawer = new CircuitDrawer(
+			nodeLayer, 
+			edgeLayer, 
+			circuitData, 
+			min, max, 
+			gridSize, 
+			connectionNodeRadius
+		);
 
 		render_complete_grid();
 
@@ -176,7 +183,13 @@
 		load_gate_panel();
 
 		show_transistor_panel();
-		show_input_panel();
+
+		var disable_io = getUrlParameter('disableIO');
+		if (disable_io) {
+			$("#io-panel-container").addClass("hidden");
+		} else {
+			show_input_panel();
+		}
 	}
 
 	function expose(func, name) {
