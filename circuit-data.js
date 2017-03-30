@@ -1,7 +1,6 @@
-
-"use strict";
-
 (function () {
+
+	"use strict";
 
 	// handles data book-keeping for Circuits, can be exported to json-able file
 	function CircuitData(simType) {
@@ -134,7 +133,7 @@
 			pos: null,
 			rect: null,
 			pins: [{
-				pos: null,
+				// pos: null,
 				adj: [],
 			}]
 		}
@@ -169,7 +168,7 @@
 				height: 2 * wireSize,
 			},
 			pins: [{
-				pos: pos,
+				// pos: pos,
 				adj: [],
 			}],
 		};
@@ -193,21 +192,21 @@
 			nid: nid,
 			type: tid,
 			pos: pos,
-			text_pos: {
-				x: pos.x + type.text_pos[0],
-				y: pos.y + type.text_pos[1],
-			},
+			// text_pos: {
+			// 	x: pos.x + type.text_pos[0],
+			// 	y: pos.y + type.text_pos[1],
+			// },
 			rect: rect,
 			pins: [],
 		}
 
 		for (var i = 0; i < type.pins.length; i++) {
-			var pin_pos = type.pins[i];
+			// var pin_pos = type.pins[i];
 			var pin = {
-				pos: {
-					x: pos.x + pin_pos[0],
-					y: pos.y + pin_pos[1],
-				},
+				// pos: {
+				// 	x: pos.x + pin_pos[0],
+				// 	y: pos.y + pin_pos[1],
+				// },
 				adj: [],
 			};
 
@@ -373,15 +372,42 @@
 		}
 	}
 
-	CircuitData.prototype.closestPin = function(pos, maxDist) {
+	CircuitData.prototype.pinPos = function(nid, pid, nodeTypes, ioX) {
+		return getPinPos(this.getNode(nid), pid, nodeTypes, ioX);
+	}
+
+	function getPinPos(node, pid, nodeTypes, ioX) {
+		var type = nodeTypes[node.type];
+		if (type) {
+			return {
+				x: node.pos.x + type.pins[pid][0],
+				y: node.pos.y + type.pins[pid][1],
+			};
+		} 
+		else if (node.type == LibCircuit.inputType) {
+			return {
+				x: node.pos.x + ioX,
+				y: node.pos.y,
+			};
+		}
+		else {
+			return {
+				x: node.pos.x,
+				y: node.pos.y,
+			};
+		}
+	}
+
+	CircuitData.prototype.closestPin = function(pos, maxDist, nodeTypes, ioX) {
 		var closest_pin;
 
 		// find connection node within the circle defined by clickBox
 		for (var nid in this.graph) {
 			var node = this.graph[nid];
 			for (var pid in node.pins) {
-				var pin = node.pins[pid];
-				var dist = point_distance(pin.pos, pos);
+				// var pin = node.pins[pid];
+				var pin_pos = getPinPos(node, pid, nodeTypes, ioX);
+				var dist = point_distance(pin_pos, pos);
 				if (dist <= maxDist) {
 					closest_pin = [nid, pid];
 					break;
@@ -437,13 +463,14 @@
 		return data;
 	}
 
-	var latest_file_version = "4";
+	var latest_file_version = "5";
 
 	var converter_map = {
 		"0": version_0_converter,
 		"1": version_1_converter,
 		"2": version_2_converter,
 		"3": version_3_converter,
+		"4": version_4_converter,
 	};
 
 	// version 1 reduces file size by removing redundant data
@@ -475,20 +502,31 @@
 				data.undoStack[i].undoType = 'node';
 			}
 		};
-		data.version = "3"
+		data.version = "3";
 		return data;
 	}
 
 	// version 4 adds a type to CircuitData which distinguishes between transistor and gate graphs
 	function version_3_converter(data) {
 		// everything before version 3 was a transistor type
-		data.simType = CircuitData.SIM_TYPE_TRANSISTOR
-		data.version = "4"
+		data.simType = CircuitData.SIM_TYPE_TRANSISTOR;
+		data.version = "4";
 		return data;
 	}
 
+	// version 5 removed positional data for pins and text
+	function version_4_converter(data) {
+		for (var nid in data.graph) {
+			delete data.graph[nid].text_pos;
+			for (var i = data.graph[nid].pins.length - 1; i >= 0; i--) {
+				delete data.graph[nid].pins[i].pos
+			};
+		}
+		data.version = "5";
+		return data;
+	}
 
-	CircuitData.prototype.import = function(data) {
+	CircuitData.prototype.import = function(data, boundingBoxFn) {
 		if (!data.version)
 			data.version = "0";
 
@@ -506,6 +544,10 @@
 		}
 
 		delete data.version;
+
+		for (var nid in data.graph) {
+			data.graph[nid].rect = boundingBoxFn(data.graph[nid].type, data.graph[nid].pos);
+		}
 
 		for (var key in data) {
 			this[key] = data[key];

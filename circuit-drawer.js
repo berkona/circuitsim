@@ -1,16 +1,16 @@
 (function () {
 
+	"use strict";
+
 	// for debugging
-	var render_bounding_box = false;
+	var DEBUG_DRAW_BB = false;
 
 	// support class for rendering circuits from circuitData
-	function CircuitDrawer(nodeLayer, edgeLayer, circuitData, min, max, gridSize, pinRadius) {
+	function CircuitDrawer(nodeLayer, edgeLayer, circuitData, nodeTypes, gridSize, pinRadius) {
 		this.nodeLayer = nodeLayer;
 		this.edgeLayer = edgeLayer;
 		this.circuitData = circuitData;
-		this.min = min;
-		this.max = max;
-		this.gridSize = gridSize;
+		this.nodeTypes = nodeTypes;
 		this.pinRadius = pinRadius;
 		this.ioStopX = gridSize - pinRadius;
 	}
@@ -90,7 +90,7 @@
 					pinX = startX - self.pinRadius
 				}
 
-				node.pins[0].pos = { x: pinX, y: y };
+				// node.pins[0].pos = { x: pinX, y: y };
 
 				ctx.save();
 				ctx.beginPath();
@@ -115,29 +115,9 @@
 		this.renderNode(node, img, drawText, drawBoundingBox);
 	}
 
-	CircuitDrawer.prototype.pinOffset = function(pin_pos) {
-		var pinRadius = this.pinRadius;
-		var x_offset = 0;
-		var y_offset = 0;
-		if (pin_pos.direction == CircuitDrawer.DIR_LEFT) {
-			x_offset = -pinRadius;
-		} else if (pin_pos.direction == CircuitDrawer.DIR_RIGHT) {
-			x_offset = pinRadius;
-		} else if (pin_pos.direction == CircuitDrawer.DIR_UP) {
-			y_offset = -pinRadius;
-		} else if (pin_pos.direction == CircuitDrawer.DIR_DOWN) {
-			y_offset = pinRadius;
-		} else {
-			console.warn("CircuitDrawer.renderNode() got unknown pin direction.  Please report this to web-admin with a console dump.");
-		}
-		return {
-			x: pin_pos.x + x_offset,
-			y: pin_pos.y + y_offset,
-		}
-	}
-
 	CircuitDrawer.prototype.renderNode = function(node, img, drawText, drawBoundingBox) {
 		var pos = node.pos;
+		var type = this.nodeTypes[node.type];
 		var ctx = this.nodeLayer.getContext("2d");
 
 		if (img) {
@@ -151,30 +131,14 @@
 			ctx.restore();
 		}
 
-		// for (var i = node.pins.length - 1; i >= 0; i--) {
-		// 	var pin = node.pins[i];
-
-		// 	// update pin.pos
-		// 	ctx.save();
-		// 	ctx.beginPath();
-		// 	ctx.strokeStyle = "#A22";
-		// 	ctx.lineWidth = 1;
-		// 	ctx.moveTo(pin.pos.x, pin.pos.y);
-
-		// 	offset = this.pinOffset(pin.pos, this.pinRadius);
-		// 	ctx.lineTo(offset.x, offset.y);
-		// 	ctx.stroke();
-		// 	ctx.restore();
-		// };
-
 		if (drawText) {
 			ctx.save();
 			ctx.font = "10px sans";
-			ctx.fillText(node.nid, node.text_pos.x, node.text_pos.y);
+			ctx.fillText(node.nid, pos.x + type.text_pos[0], pos.y + type.text_pos[1]);
 			ctx.restore();
 		}
 
-		if (drawBoundingBox) {
+		if (drawBoundingBox || DEBUG_DRAW_BB) {
 			var rect = node.rect;
 			ctx.save();
 			ctx.setLineDash([5, 5]);
@@ -198,60 +162,60 @@
 		this.edgeLayer.getContext("2d").clearRect(0, 0, this.edgeLayer.width, this.edgeLayer.height);
 	}
 
-	function astar_route(p1, p2, circuitData, fromID, toID, min, max, gridSize) {
-		var ignore_list = [ fromID, toID ];
+	// function astar_route(p1, p2, circuitData, fromID, toID, min, max, gridSize) {
+	// 	var ignore_list = [ fromID, toID ];
 
-		function euclid_distance(p1, p2) {
-			var x = (p2.x - p1.x);
-			var y = (p2.y - p1.y);
-			return Math.sqrt(x * x + y * y);
-		}
+	// 	function euclid_distance(p1, p2) {
+	// 		var x = (p2.x - p1.x);
+	// 		var y = (p2.y - p1.y);
+	// 		return Math.sqrt(x * x + y * y);
+	// 	}
 
-		function taxicab_distance(p1, p2) {
-			 return Math.abs(p1.x - p2.x) + Math.abs(p1.y - p2.y);
-		}
+	// 	function taxicab_distance(p1, p2) {
+	// 		 return Math.abs(p1.x - p2.x) + Math.abs(p1.y - p2.y);
+	// 	}
 
-		// TODO make routing hueristic prefer straighter lines
-		// TODO prevent routing through lines unless is acceptable
-		function routing_heuristic(p1, p2) {
-			var dist = taxicab_distance(p1, p2);
-			// var isStraight = p1.x == p2.x || p1.y == p2.y;
-			// if (!isStraight)
-			// 	dist += 5 * gridSize;
+	// 	// TODO make routing hueristic prefer straighter lines
+	// 	// TODO prevent routing through lines unless is acceptable
+	// 	function routing_heuristic(p1, p2) {
+	// 		var dist = taxicab_distance(p1, p2);
+	// 		// var isStraight = p1.x == p2.x || p1.y == p2.y;
+	// 		// if (!isStraight)
+	// 		// 	dist += 5 * gridSize;
 
-			var intersects = circuitData.lineIntersects([ p1, p2]);
-			if (intersects) {
-				var relaxedIntersects = circuitData.lineIntersects([ p1, p2 ], ignore_list);
-				if (relaxedIntersects) {
-					dist += 10 * gridSize;
-				} else {
-					dist += 5 * gridSize;
-				}
-			}
-			return dist;
-		}
+	// 		var intersects = circuitData.lineIntersects([ p1, p2]);
+	// 		if (intersects) {
+	// 			var relaxedIntersects = circuitData.lineIntersects([ p1, p2 ], ignore_list);
+	// 			if (relaxedIntersects) {
+	// 				dist += 10 * gridSize;
+	// 			} else {
+	// 				dist += 5 * gridSize;
+	// 			}
+	// 		}
+	// 		return dist;
+	// 	}
 
-		var bestStart = {
-			x: Math.round(p1.x / gridSize) * gridSize,
-			y: Math.round(p1.y / gridSize) * gridSize,
-		};
+	// 	var bestStart = {
+	// 		x: Math.round(p1.x / gridSize) * gridSize,
+	// 		y: Math.round(p1.y / gridSize) * gridSize,
+	// 	};
 
-		var bestEnd = {
-			x: Math.round(p2.x / gridSize) * gridSize,
-			y: Math.round(p2.y / gridSize) * gridSize,
-		};
+	// 	var bestEnd = {
+	// 		x: Math.round(p2.x / gridSize) * gridSize,
+	// 		y: Math.round(p2.y / gridSize) * gridSize,
+	// 	};
 
-		// function collides(pos) {
-		// 	return circuitData.pointIntersects(pos, ignore_list);
-		// }
+	// 	// function collides(pos) {
+	// 	// 	return circuitData.pointIntersects(pos, ignore_list);
+	// 	// }
 
-		var path = LibAStar(bestStart, bestEnd, min, max, gridSize, routing_heuristic);
-		if (path) {
-			path.push(p1);
-			path.unshift(p2);
-		}
-		return path;
-	}
+	// 	var path = LibAStar(bestStart, bestEnd, min, max, gridSize, routing_heuristic);
+	// 	if (path) {
+	// 		path.push(p1);
+	// 		path.unshift(p2);
+	// 	}
+	// 	return path;
+	// }
 
 	function simple_route_wire(p1, p2, circuitData, fromID, toID) {
 		// try the 2 combinations of component vectors first
@@ -283,7 +247,7 @@
 		return polyLineList[0];
 	}
 
-	function render_wire(ctx, fromPos, toPos, circuitData, fromID, toID, min, max, gridSize) {
+	function render_wire(ctx, fromPos, toPos, circuitData, fromID, toID) {
 		var path;
 		// path = astar_route(fromPos, toPos, circuitData, fromID, toID, min, max, gridSize);
 		if (!path) {
@@ -304,6 +268,35 @@
 		ctx.restore();
 	}
 
+	function getPinPos(node, pid, circuitDrawer) {
+		var pos = node.pos;
+		var type = circuitDrawer.nodeTypes[node.type];
+		if (type) {
+			return {
+				x: pos.x + type.pins[pid][0],
+				y: pos.y + type.pins[pid][1],
+			};
+		} 
+		else if (node.type == LibCircuit.inputType) {
+			return {
+				x: pos.x + circuitDrawer.ioStopX + circuitDrawer.pinRadius,
+				y: pos.y
+			};
+		} 
+		else if (node.type == LibCircuit.outputType) {
+			return {
+				x: pos.x - circuitDrawer.pinRadius,
+				y: pos.y
+			}
+		} 
+		else {
+			return {
+				x: pos.x,
+				y: pos.y,
+			}
+		}
+	}
+
 	CircuitDrawer.prototype._renderEdges = function() {
 		var ctx = this.edgeLayer.getContext("2d");
 
@@ -319,21 +312,24 @@
 
 		for (var nid in this.circuitData.graph) {
 			var node = this.circuitData.graph[nid];
+			// var pos = node.pos;
+			// var type = this.nodeTypes[node.type];
 			for (var pid = node.pins.length - 1; pid >= 0; pid--) {
 				var from = [ nid, pid ];
 				var pin = node.pins[pid];
+				var pin_pos = getPinPos(node, pid, this);
 				for (var j = pin.adj.length - 1; j >= 0; j--) {
 					var to = pin.adj[j];
 					var toID = to[0];
+					var toNode = this.circuitData.getNode(toID);
+					var toType = this.nodeTypes[toNode.type];
 					var toPinId = to[1];
 					var toPin = this.circuitData.getPin(toID, toPinId);
-
+					var toPin_pos = getPinPos(toNode, toPinId, this);
 					if (alreadyRendered(from, to)) continue;
-					fromOffset = pin.pos;
-					toOffset = toPin.pos;
-					//fromOffset = this.pinOffset(pin.pos, this.pinRadius);
-					//toOffset = this.pinOffset(toPin.pos, this.pinRadius);
-					render_wire(ctx, fromOffset, toOffset, this.circuitData, nid, toID, this.min, this.max, this.gridSize);
+					var fromOffset = pin_pos;
+					var toOffset = toPin_pos;
+					render_wire(ctx, fromOffset, toOffset, this.circuitData, nid, toID);
 
 					rendered_set[edgeId(from, to)] = true;
 				}

@@ -1,7 +1,7 @@
-"use strict";
-
 (function() {
 
+	"use strict";
+	
 	var root = {};
 
 	// common types
@@ -20,7 +20,8 @@
 	var nandType = 'nand';
 	var orType = 'or';
 	var norType = 'nor';
-	// var xorType = 'xor';
+	var xorType = 'xor';
+	var xnorType = 'xnor';
 	var inverterType = 'inverter';
 	
 	// common types
@@ -39,7 +40,8 @@
 	root.nandType = nandType;
 	root.orType = orType;
 	root.norType = norType;
-	// root.xorType = xorType;
+	root.xorType = xorType;
+	root.xnorType = xnorType;
 	root.inverterType = inverterType;
 
 	var pinNames = [
@@ -406,21 +408,35 @@
 		if (!a) return null;
 		return a == '1' ? '0' : '1';
 	};
+
 	logic_table[andType] = function (a, b) {
 		if (!a || !b) return null;
 		return a == '1' && b == '1' ? '1' : '0';
 	};
+
 	logic_table[nandType] = function (a, b) {
 		if (!a || !b) return null;
 		return a == '1' && b == '1' ? '0' : '1';
 	};
+
 	logic_table[orType] = function (a, b) {
 		if (!a || !b) return null;
 		return a == '1' || b == '1' ? '1' : '0';
 	};
+
 	logic_table[norType] = function (a, b) {
 		if (!a || !b) return null;
 		return a == '1' || b == '1' ? '0' : '1';
+	};
+
+	logic_table[xorType] = function(a, b) {
+		if (!a || !b) return null;
+		return (a == '1' && b == '0') || (a == '0' && b == '1') ? '1' : '0';
+	};
+
+	logic_table[xnorType] = function (a, b) {
+		if (!a || !b) return null;
+		return (a == '1' && b == '0') || (a == '0' && b == '1') ? '0' : '1';
 	};
 
 	function simulateGateNet(circuitData, inputMap) {

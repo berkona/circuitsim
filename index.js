@@ -1,7 +1,7 @@
-"use strict";
-
 // this is all ui javascript
 (function () {
+
+	"use strict";
 
 	var nodeLayer, backgroundLayer, edgeLayer, uiLayer;
 
@@ -19,7 +19,6 @@
 	var deleteMode = false;
 
 	transistor_types[LibCircuit.pmosType] = {
-		src: "images/pmos.png",
 		text_pos: [5, 5],
 		pins: [
 			[39, 2 ],
@@ -29,7 +28,6 @@
 	}
 
 	transistor_types[LibCircuit.nmosType] = {
-		src: "images/nmos.png",
 		text_pos: [5, 5],
 		pins: [
 			[39, 2 ],
@@ -39,7 +37,6 @@
 	}
 
 	transistor_types[LibCircuit.vccType] = {
-		src: "images/vcc.png",
 		text_pos: [5, 26],
 		pins: [
 			[40, 17],
@@ -47,7 +44,6 @@
 	}
 
 	transistor_types[LibCircuit.gndType] = {
-		src: "images/gnd.png",
 		text_pos: [5, 26],
 		pins: [
 			[40, 17],
@@ -57,85 +53,102 @@
 	var gate_types = {};
 
 	gate_types[LibCircuit.andType] = {
-		src: "images/and.png",
-		text_pos: [40, 26],
+		text_pos: [25, 17],
 		pins: [
-			[1, 12  ],
-			[95, 22 ],
-			[1, 30  ],
+			[1, 8  	],
+			[60, 14 ],
+			[1, 19 	],
 		],
 	};
 
 	gate_types[LibCircuit.nandType] = {
-		src: "images/nand.png",
-		text_pos: [40, 26],
+		text_pos: [25, 17],
 		pins: [
-			[1, 12  ],
-			[95, 22 ],
-			[1, 30  ],
+			[1, 8   ],
+			[60, 14 ],
+			[1, 19  ],
 		],
 	};
 
 	gate_types[LibCircuit.orType] = {
-		src: "images/or.png",
-		text_pos: [40, 26],
+		text_pos: [25, 17],
 		pins: [
-			[1, 12  ],
-			[95, 22 ],
-			[1, 30  ],
+			[1, 8   ],
+			[60, 14 ],
+			[1, 19  ],
 		],
 	};
 
 	gate_types[LibCircuit.norType] = {
-		src: "images/nor.png",
-		text_pos: [40, 26],
+		text_pos: [25, 17],
 		pins: [
-			[1, 12  ],
-			[95, 22 ],
-			[1, 30  ],
+			[1, 8   ],
+			[60, 14 ],
+			[1, 19  ],
 		],
 	};
 
-	// gate_types[LibCircuit.xorType] = {
-	// 	src: "images/xor.png",
-	// 	text_pos: [40, 26],
-	// 	pins: [
-	// 		[1, 12],
-	// 		[95, 22],
-	// 		[1, 30],
-	// 	],
-	// };
+	gate_types[LibCircuit.xorType] = {
+		text_pos: [25, 17],
+		pins: [
+			[1, 8   ],
+			[60, 14 ],
+			[1, 19  ],
+		],
+	};
+
+	gate_types[LibCircuit.xnorType] = {
+		text_pos: [25, 17],
+		pins: [
+			[1, 8   ],
+			[60, 14 ],
+			[1, 19  ],
+		],
+	};
 
 	gate_types[LibCircuit.inverterType] = {
-		src: "images/inverter.png",
-		text_pos: [30, 26],
+		text_pos: [19, 17],
 		pins: [
-			[1, 22  ],
-			[95, 22 ],
+			[1, 13  ],
+			[60, 13 ],
 		],
 	};
 	
+	var node_types = {};
+
+	for (var id in transistor_types) {
+		node_types[id] = transistor_types[id];
+	}
+
+	for (var id in gate_types) {
+		node_types[id] = gate_types[id];	
+	}
+
 	var template_dir = "templates/"
 
 	$(document).ready(load_doc)
 	// use window.onload not ready, because some of the images might not be ready
+
 	$(window).on("load", load_template)
 
 	function load_template() {
 		var template = getUrlParameter('template')
 		if (template) {
-			// sanitize template param so it only contains \w+.\w+
-			var santizeRegex = /[^A-Za-z0-9_.]/
+			// sanitize template param so it only contains \w+
+			var santizeRegex = /[^A-Za-z0-9_]/
 			template = template.replace(santizeRegex, '')
 
 			// make sure we don't have any funny business going on
-			var isSantized = /\w+.\w+/.test(template)
+			var isSantized = /\w+/.test(template)
 
 			if (isSantized) {
 				// make an ajax query to get file data
-				$.getJSON(template_dir + template, function (data) {
+				$.getJSON(template_dir + template + '.json', function (data) {
+					if (data.undoStack)
+						delete data.undoStack;
+
 					circuitData.clear();
-					circuitData.import(data);
+					circuitData.import(data, getBoundingBox);
 
 					circuitDrawer.clear();
 					circuitDrawer.renderAll(getImageMap());
@@ -157,22 +170,13 @@
 		$(uiLayer).on('drop', drop_handler);
 		$(uiLayer).on('dragover', dragover_handler);
 
-		var min = {
-			x: gridSize,
-			y: gridSize,
-		}
-		var max = {
-			x: edgeLayer.width - gridSize,
-			y: edgeLayer.height - gridSize,
-		}
-
 		circuitData = new CircuitData();
 		circuitDrawer = new CircuitDrawer(
 			nodeLayer, 
-			edgeLayer, 
-			circuitData, 
-			min, max, 
-			gridSize, 
+			edgeLayer,
+			circuitData,
+			node_types,
+			gridSize,
 			connectionNodeRadius
 		);
 
@@ -197,24 +201,24 @@
 	}
 
 	function load_transistor_panel() {
-		var tp = $("#transistor-panel-t");
-		tp.empty();
+		// var tp = $("#transistor-panel-t");
+		// tp.empty();
 		for (var id in transistor_types) {
-			var typedef = transistor_types[id];
-			var ele = $('<img id="'+id+'" src="'+typedef.src+'" class="drag-panel drag-icon col-md-3" draggable="true"></img>');
+			// var typedef = transistor_types[id];
+			var ele = $('#'+id);
 			ele.on('dragstart', drag_handler);
-			tp.append(ele);
+			// tp.append(ele);
 		};
 	}
 
 	function load_gate_panel() {
-		var tp = $("#transistor-panel-g");
-		tp.empty();
+		// var tp = $("#transistor-panel-g");
+		// tp.empty();
 		for (var id in gate_types) {
-			var typedef = gate_types[id];
-			var ele = $('<img id="'+id+'" src="'+typedef.src+'" class="drag-panel drag-icon col-md-3" draggable="true"></img>');
+			// var typedef = gate_types[id];
+			var ele = $('#'+id);
 			ele.on('dragstart', drag_handler);
-			tp.append(ele);
+			// tp.append(ele);
 		}
 	}
 
@@ -301,6 +305,8 @@
 		for (var i = error.nids.length - 1; i >= 0; i--) {
 			var nid = error.nids[i];
 			var node = circuitData.getNode(nid);
+			if (node.type == LibCircuit.inputType || node.type == LibCircuit.outputType)
+				return;
 			var img = document.getElementById(node.type);
 			circuitDrawer.deleteNode(node.rect);
 			circuitDrawer.renderNode(node, img, node.type != LibCircuit.wireType, true);
@@ -485,15 +491,7 @@
 
 	function getImageMap() {
 		var imageMap = {};
-		var typedefs;
-		if (circuitData.simType == CircuitData.SIM_TYPE_TRANSISTOR) {
-			typedefs = transistor_types;
-		} else if (circuitData.simType == CircuitData.SIM_TYPE_GATE) {
-			typedefs = gate_types;
-		} else {
-			return console.warn("Invalid simType in getImageMap.  Please report this to web-admin with console dump.");
-		}
-
+		var typedefs = node_types;
 		for (var type in typedefs) {
 			var img = document.getElementById(type);
 			imageMap[type] = img;
@@ -515,7 +513,7 @@
 			// console.log(data);
 			
 			circuitData.clear();
-			circuitData.import(data);
+			circuitData.import(data, getBoundingBox);
 
 			if (circuitData.simType == CircuitData.SIM_TYPE_TRANSISTOR) {
 				show_transistor_panel();
@@ -607,6 +605,30 @@
 		return pos;
 	}
 
+	var wireSize = 8;
+
+	function getBoundingBox(typeId, pos) {
+		var img = document.getElementById(typeId);
+		if (img) {
+			return {
+				x: pos.x - gridSize/2,
+				y: pos.y - gridSize/2,
+				width: img.naturalWidth + gridSize,
+				height: img.naturalHeight + gridSize,
+			};
+		} else if (typeId == LibCircuit.wireType) {
+			return {
+				x: pos.x - wireSize,
+				y: pos.y - wireSize,
+				width: 2 * wireSize,
+				height: 2 * wireSize,
+			};
+		} else {
+			// circuitDrawer will handle this
+			return null;
+		}
+	}
+
 	function drop_handler (evt) {
 		evt.preventDefault();
 
@@ -629,12 +651,7 @@
 
 		pos = snap_to_canvas(pos, img.naturalWidth, img.naturalHeight);
 
-		var rect = {
-			x: pos.x - gridSize/2,
-			y: pos.y - gridSize/2,
-			width: img.naturalWidth + gridSize,
-			height: img.naturalHeight + gridSize,
-		}
+		var rect = getBoundingBox(typeId, pos);
 
 		// prevent rendering over another symbol
 		if (circuitData.rectIntersects(rect)) {
@@ -647,7 +664,7 @@
 	}
 
 	var lastClickedNode = null;
-	var clickBox = 10;
+	var clickBox = 20;
 
 	var deletionNID = null;
 	var destinationDeletionNode = null;
@@ -687,7 +704,7 @@
 	}
 
 	function handle_pin_connect(pos) {
-		var closest_pin = circuitData.closestPin(pos, clickBox);
+		var closest_pin = circuitData.closestPin(pos, clickBox, node_types, gridSize - connectionNodeRadius);
 
 		if (lastClickedNode) {
 			uiLayer.getContext("2d").clearRect(0, 0, uiLayer.width, uiLayer.height);
@@ -735,7 +752,7 @@
 		if (!lastClickedNode)
 			return console.error("Could not get lastClickedNode this should not happen");
 
-		var pin_pos = circuitData.getPin(lastClickedNode[0], lastClickedNode[1]).pos;
+		var pin_pos = circuitData.pinPos(lastClickedNode[0], lastClickedNode[1], node_types, gridSize - connectionNodeRadius);
 
 		var ctx = uiLayer.getContext("2d");
 		
