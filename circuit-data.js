@@ -431,8 +431,14 @@
 		
 		var undoRect = null;
 
+		var undoType = data.undoType
 		// perform node deletion
 		if (data.undoType == 'node') {
+			var type = this.getNode(data.nid).type;
+			// for compatibility with client code
+			if (type == LibCircuit.inputType || type == LibCircuit.outputType) {
+				undoType = 'io'
+			}
 			undoRect = this.graph[data.nid].rect;
 			this.deleteNode(data.nid);
 		}
@@ -443,7 +449,7 @@
 			console.warn("Unknown undo type in undo stack");
 		}
 
-		return [ data.undoType, undoRect ];
+		return [ undoType, undoRect ];
 	}
 
 	CircuitData.prototype.clear = function() {
