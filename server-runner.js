@@ -6,59 +6,23 @@ var fs = require('fs');
 var LibCircuit = require("./libcircuit");
 var CircuitData = require("./circuit-data");
 
-if (process.argv.length != 4) {
-	console.log("USAGE: node server-runner.js CIRCUIT_DATA_EXPECTED CIRCUIT_DATA_ACTUAL");
+if (process.argv.length != 3) {
+	console.log("USAGE: node server-runner.js CIRCUIT_DATA");
 } else {
 	main();
 }
 
-function convertToObjectSequence(result) {
-	var obj = {};
-	var combined = result.inputs.concat(result.outputs);
-	for (var i = combined.length - 1; i >= 0; i--) {
-		var name = combined[i];
-		var lst = [];
-		for (var j = 0; j < result.rows.length; j++) {
-			lst.push(result.rows[j][i]);
-		};
-		obj[name] = lst;
-	};
-
-	return obj;
-}
-
 function main() {
-	var expectedFName = process.argv[2];
-	var actualFName = process.argv[3];
-	var expectedResult = runSimulation(expectedFName);
-	var actualResult = runSimulation(actualFName);
+	var fName = process.argv[2];
+	var result = runSimulation(fName);
 
-	if (expectedResult.inputs.length != actualResult.inputs.length) {
-		console.log("Actual # of inputs does not match expected # of inputs");
-		return;
-	} else if (expectedResult.outputs.length != actualResult.outputs.length) {
-		console.log("Actual # of outputs does not match expected # of outputs");
-		return;
-	} else if (expectedResult.rows.length != actualResult.rows.length) {
-		console.log("Actual # of rows does not match expected # of rows.  Something horrible happened.");
-		return;
-	}
+	result.inputs.sort();
+	result.outputs.sort();
 
-	expectedResult = convertToObjectSequence(expectedResult);
-	actualResult = convertToObjectSequence(actualResult);
-
-	for (var name in expectedResult) {
-		var expectedSequence = expectedResult[name];
-		var actualSequence = actualResult[name];
-		if (!actualSequence)
-			console.log("Actual result did not contain variable '"+name+"'.");
-		for (var i = expectedSequence.length - 1; i >= 0; i--) {
-			var expectedValue = expectedSequence[i];
-			var actualValue = actualSequence[i];
-			if (expectedValue != actualValue)
-				console.log("Mismatch: name "+name+" expected value "+expectedValue+", actual value "+actualValue);
-		};
-	}
+	console.log(result.inputs.join(' ') + ' ' + result.outputs.join(' '));
+	for (var i = 0; i < result.rows.length; i++) {
+		console.log(result.rows[i].join(' '));
+	};
 }
 
 function runSimulation(fname) {
@@ -73,11 +37,22 @@ function runSimulation(fname) {
 		console.log(verifiedResult[0] + " returned error: " +verifiedResult[1]);
 		return;
 	}
-	var result = LibCircuit.simulate(circuitData.graph);
+
+	var result;
+	if (circuitData.simType == CircuitData.SIM_TYPE_TRANSISTOR) {
+		result = LibCircuit.simulate(circuitData.graph);
+	} else if (circuitData.simType == CircuitData.SIM_TYPE_GATE) {
+		result == LibCircuit.simulateGates(circuitData.graph);
+	} else {
+		throw new Error("Circuit could not be simulated: invalid simType");
+	}
+
 	function GetName(x) {
 		return circuitData.graph[x].name;
 	}
+
 	result.inputs = result.inputs.map(GetName);
 	result.outputs = result.outputs.map(GetName);
+
 	return result;
 }

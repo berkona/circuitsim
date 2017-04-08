@@ -13,13 +13,14 @@
 		this.nodeTypes = nodeTypes;
 		this.pinRadius = pinRadius;
 		this.ioStopX = gridSize - pinRadius;
+		this._wireLines = {};
 	}
 
 	// direction is an int: 0 = draw to left, 1 = draw to right, 2 = draw upwards, 3 = draw downwards
-	CircuitDrawer.DIR_LEFT = 0;
-	CircuitDrawer.DIR_RIGHT = 1;
-	CircuitDrawer.DIR_UP = 2;
-	CircuitDrawer.DIR_DOWN = 3;
+	// CircuitDrawer.DIR_LEFT = 0;
+	// CircuitDrawer.DIR_RIGHT = 1;
+	// CircuitDrawer.DIR_UP = 2;
+	// CircuitDrawer.DIR_DOWN = 3;
 
 	CircuitDrawer.prototype.renderAll = function(types) {
 		this.renderIO();
@@ -160,6 +161,7 @@
 
 	CircuitDrawer.prototype._clearEdges = function() {
 		this.edgeLayer.getContext("2d").clearRect(0, 0, this.edgeLayer.width, this.edgeLayer.height);
+		this._wireLines = {};
 	}
 
 	// function astar_route(p1, p2, circuitData, fromID, toID, min, max, gridSize) {
@@ -266,6 +268,8 @@
 		};
 		ctx.stroke();
 		ctx.restore();
+
+		return path;
 	}
 
 	function getPinPos(node, pid, circuitDrawer) {
@@ -329,17 +333,59 @@
 					if (alreadyRendered(from, to)) continue;
 					var fromOffset = pin_pos;
 					var toOffset = toPin_pos;
-					render_wire(ctx, fromOffset, toOffset, this.circuitData, nid, toID);
-
-					rendered_set[edgeId(from, to)] = true;
+					var edgeID = edgeId(from, to);
+					this._wireLines[edgeID] = render_wire(ctx, fromOffset, toOffset, this.circuitData, nid, toID);
+					rendered_set[edgeID] = true;
 				}
+			}
+		}
+	}
+
+	function circle_line_intersects(center, radius, line) {
+		// finds the intersection between a circle and a line
+		// the circle is assumed to be represented by the center (C, a 2d point vector) and a radius (r, scalar)
+		// the line is assumed to be a 2-tuple of 2d point vectors
+		var seg_a = new LibGeom.Vector2(line[0].x, line[0].y);
+		var seg_b = new LibGeom.Vector2(line[1].x, line[1].y);
+		var cir_pos = new LibGeom.Vector2(center.x, center.y);
+
+		// find the vector A -> B
+		var seg_v = seg_b.sub(seg_a);
+
+		// find the vector A -> C
+		var pt_v = cir_pos.sub(seg_a);
+
+		var seg_v_unit = seg_v.div(seg_v.length());
+		var proj = pt_v.dot(seg_v_unit);
+		var proj_v = seg_v_unit.mult(proj);
+		var closest = proj_v.add(seg_a);
+		var rejection = cir_pos.sub(closest);
+		return rejection.length() <= radius;
+	}
+
+	function circle_polyline_intersects(center, radius, polyline) {
+		for (var i = 0; i < polyline.length - 1; i++) {
+			if (circle_line_intersects(center, radius, [ polyline[i], polyline[i+1] ]))
+				return true;
+		}
+		return false;
+	}
+
+	CircuitDrawer.prototype.pointIntersects = function(point, maxDist) {
+		for (var edgeID in this._wireLines) {
+			if (circle_polyline_intersects(point, maxDist, this._wireLines[edgeID])) {
+				var edge = edgeID.split('-');
+				return {
+					from: [ edge[0], edge[1] ],
+					to: [ edge[2], edge[3] ],
+				};
 			}
 		}
 	}
 
 	CircuitDrawer.prototype.clear = function() {
 		this.nodeLayer.getContext("2d").clearRect(0, 0, this.nodeLayer.width, this.nodeLayer.height);
-		this.edgeLayer.getContext("2d").clearRect(0, 0, this.edgeLayer.width, this.edgeLayer.height);
+		this._clearEdges();
 	}
 
 	// running in node.js

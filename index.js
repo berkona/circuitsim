@@ -19,7 +19,7 @@
 	var deleteMode = false;
 
 	transistor_types[LibCircuit.pmosType] = {
-		text_pos: [5, 5],
+		text_pos: [5, 10],
 		pins: [
 			[39, 2 ],
 			[1, 22 ],
@@ -28,7 +28,7 @@
 	}
 
 	transistor_types[LibCircuit.nmosType] = {
-		text_pos: [5, 5],
+		text_pos: [5, 10],
 		pins: [
 			[39, 2 ],
 			[1, 22 ],
@@ -253,6 +253,11 @@
 		};
 
 		var addTemplate = $('#io-add-template').clone()
+		// disable enter submission
+		addTemplate.submit(function () {
+			return false;
+		});
+
 		addTemplate.removeClass("hidden");
 		addTemplate.find(".io-submit-btn").click(addEventHandler);
 		ip.append(addTemplate)
@@ -594,8 +599,8 @@
 
 	function snap_to_canvas(pos, width, height) {
 		// snap to grid
-		pos.x = Math.round(pos.x / gridSize) * gridSize;
-		pos.y = Math.round(pos.y / gridSize) * gridSize;
+		// pos.x = Math.round(pos.x / gridSize) * gridSize;
+		// pos.y = Math.round(pos.y / gridSize) * gridSize;
 
 		// bound by canvas size
 		pos.x = Math.max(pos.x, ioStopX + 2 * connectionNodeRadius + 5);
@@ -609,21 +614,30 @@
 
 	function getBoundingBox(typeId, pos) {
 		var img = document.getElementById(typeId);
-		if (img) {
+		if (typeId == LibCircuit.gndType || typeId == LibCircuit.vccType) {
 			return {
-				x: pos.x - gridSize/2,
-				y: pos.y - gridSize/2,
-				width: img.naturalWidth + gridSize,
-				height: img.naturalHeight + gridSize,
+				x: pos.x,
+				y: pos.y,
+				width: img.naturalWidth,
+				height: img.naturalHeight + gridSize/2, // add gridSize/2 for text below wire
 			};
-		} else if (typeId == LibCircuit.wireType) {
+		} else  if (img) {
+			return {
+				x: pos.x,
+				y: pos.y,
+				width: img.naturalWidth,
+				height: img.naturalHeight,
+			};
+		}
+		else if (typeId == LibCircuit.wireType) {
 			return {
 				x: pos.x - wireSize,
 				y: pos.y - wireSize,
 				width: 2 * wireSize,
 				height: 2 * wireSize,
 			};
-		} else {
+		} 
+		else {
 			// circuitDrawer will handle this
 			return null;
 		}
@@ -640,10 +654,12 @@
 		if (circuitData.simType == "transistor") {
 			type = transistor_types[typeId];
 		} else if (circuitData.simType == "gate") {
-			var type = gate_types[typeId];
+			type = gate_types[typeId];
 		} else {
 			return console.warn("Invalid CircuitData.simType in drop_handler().  Please report this to the web-admin along with console dump.");
 		}
+
+		// mouse_offset = window_to_canvas(nodeLayer, mouse_offset.x, mouse_offset.y);
 
 		// conform pos to offset when started dragging
 		pos.x = pos.x - mouse_offset.x + img.width/2; // add half width b/c centers image on mouse
@@ -664,7 +680,7 @@
 	}
 
 	var lastClickedNode = null;
-	var clickBox = 20;
+	var clickBox = 10;
 
 	var deletionNID = null;
 	var destinationDeletionNode = null;
@@ -713,10 +729,22 @@
 			if (closest_pin) {
 				circuitData.addEdge(lastClickedNode, closest_pin);
 				circuitDrawer.renderEdges();
-			} else if (!circuitData.pointIntersects(pos)) {
-				pos = snap_to_canvas(pos, 10, 10);
+			}
+			else if (!circuitData.pointIntersects(pos)) {
 				var nid = circuitData.addWire(lastClickedNode, pos);
 				circuitDrawer.renderNode(circuitData.getNode(nid));
+				var intersectingEdge = circuitDrawer.pointIntersects(pos, clickBox);
+				if (intersectingEdge) {
+					var fromNID = intersectingEdge.from[0];
+					var fromPID = intersectingEdge.from[1];
+					var toNID = intersectingEdge.to[0];
+					var toPID = intersectingEdge.to[1];
+					var newEdgePoint = [ nid, 0 ];
+					// splice node into circuitData
+					circuitData.deleteEdge(fromNID, fromPID, toNID, toPID);
+					circuitData.addEdge(intersectingEdge.from, newEdgePoint);
+					circuitData.addEdge(newEdgePoint, intersectingEdge.to);
+				}
 				circuitDrawer.renderEdges();
 			}
 

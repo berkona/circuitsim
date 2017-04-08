@@ -49,6 +49,22 @@
 			} else {
 				console.warn("Could not find edge for deletion, did it exist in graph?");
 			}
+
+			var undoIdx = -1;
+			for (var i = self.undoStack.length - 1; i >= 0; i--) {
+				var data = self.undoStack[i];
+				if (data.undoType == 'edge' 
+					&& data.fromId == nid 
+					&& data.fromPin == pid 
+					&& data.toId == target_nid
+					&& data.toPin == target_pid) {
+					undoIdx = i;
+					break;
+				}
+			};
+
+			if (undoIdx !== -1)
+				self.undoStack.splice(undoIdx, 1);
 		}
 
 		removeEdge(fromNID, fromPID, toNID, toPID);
@@ -400,7 +416,7 @@
 
 	CircuitData.prototype.closestPin = function(pos, maxDist, nodeTypes, ioX) {
 		var closest_pin;
-
+		var best_dist = maxDist;
 		// find connection node within the circle defined by clickBox
 		for (var nid in this.graph) {
 			var node = this.graph[nid];
@@ -408,12 +424,12 @@
 				// var pin = node.pins[pid];
 				var pin_pos = getPinPos(node, pid, nodeTypes, ioX);
 				var dist = point_distance(pin_pos, pos);
-				if (dist <= maxDist) {
+				if (dist <= best_dist) {
 					closest_pin = [nid, pid];
-					break;
+					// break;
 				}
 			}
-			if (closest_pin) break;
+			// if (closest_pin) break;
 		}
 
 		return closest_pin;
@@ -551,8 +567,10 @@
 
 		delete data.version;
 
-		for (var nid in data.graph) {
-			data.graph[nid].rect = boundingBoxFn(data.graph[nid].type, data.graph[nid].pos);
+		if (boundingBoxFn) {
+			for (var nid in data.graph) {
+				data.graph[nid].rect = boundingBoxFn(data.graph[nid].type, data.graph[nid].pos);
+			}
 		}
 
 		for (var key in data) {

@@ -1,0 +1,6 @@
+Go to tests/quizzes.  Click on submissions for assignment.  Go to export.  Save as xls file.
+
+Open xls file in Excel/OpenOffice.  Click on File->Save as...->Save as csv file in a folder
+
+Split csv by submission && part
+

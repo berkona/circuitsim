@@ -1,0 +1,9 @@
+#!/bin/bash
+
+HWNO="4"
+N_PARTS=6
+GRADING_DIR="/home/jon/CONP411/Grading/"
+
+SKIP_COLS=(expr 6+${N_PARTS}+2)
+
+echo $SKIP_COLS
