@@ -171,14 +171,14 @@
 		$(uiLayer).on('dragover', dragover_handler);
 
 		circuitData = new CircuitData();
-		circuitDrawer = new CircuitDrawer(
-			nodeLayer, 
-			edgeLayer,
-			circuitData,
-			node_types,
-			gridSize,
-			connectionNodeRadius
-		);
+		circuitDrawer = new CircuitDrawer({
+			nodeLayer: nodeLayer, 
+			edgeLayer: edgeLayer,
+			circuitData: circuitData,
+			nodeTypes: node_types,
+			gridSize: gridSize,
+			pinRadius: connectionNodeRadius,
+		});
 
 		render_complete_grid();
 
@@ -658,8 +658,6 @@
 		} else {
 			return console.warn("Invalid CircuitData.simType in drop_handler().  Please report this to the web-admin along with console dump.");
 		}
-
-		// mouse_offset = window_to_canvas(nodeLayer, mouse_offset.x, mouse_offset.y);
 
 		// conform pos to offset when started dragging
 		pos.x = pos.x - mouse_offset.x + img.width/2; // add half width b/c centers image on mouse

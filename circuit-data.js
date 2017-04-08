@@ -354,7 +354,7 @@
 			// right now, a line is only not either case if it connects two points not on the grid points
 			// this only happens as the last leg connecting wire to connecting node, but we don't care
 			// about intersections of these
-			console.warn("Unsupported line type in line_intersects");
+			// console.warn("Unsupported line type in line_intersects");
 			return false;
 		}
 	}

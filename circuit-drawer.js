@@ -6,13 +6,25 @@
 	var DEBUG_DRAW_BB = false;
 
 	// support class for rendering circuits from circuitData
-	function CircuitDrawer(nodeLayer, edgeLayer, circuitData, nodeTypes, gridSize, pinRadius) {
-		this.nodeLayer = nodeLayer;
-		this.edgeLayer = edgeLayer;
-		this.circuitData = circuitData;
-		this.nodeTypes = nodeTypes;
-		this.pinRadius = pinRadius;
-		this.ioStopX = gridSize - pinRadius;
+	function CircuitDrawer(config) {
+		this.nodeLayer = config.nodeLayer;
+		this.edgeLayer = config.edgeLayer;
+		this.circuitData = config.circuitData;
+		this.nodeTypes = config.nodeTypes;
+		this.pinRadius = config.pinRadius;
+		this.ioStopX = config.gridSize - config.pinRadius;
+		this.gridSize = config.gridSize;
+
+		this.minPos = {
+			x: 0,
+			y: 0,
+		};
+		
+		this.maxPos = {
+			x: config.edgeLayer.width,
+			y: config.edgeLayer.height,
+		};
+
 		this._wireLines = {};
 	}
 
@@ -164,61 +176,6 @@
 		this._wireLines = {};
 	}
 
-	// function astar_route(p1, p2, circuitData, fromID, toID, min, max, gridSize) {
-	// 	var ignore_list = [ fromID, toID ];
-
-	// 	function euclid_distance(p1, p2) {
-	// 		var x = (p2.x - p1.x);
-	// 		var y = (p2.y - p1.y);
-	// 		return Math.sqrt(x * x + y * y);
-	// 	}
-
-	// 	function taxicab_distance(p1, p2) {
-	// 		 return Math.abs(p1.x - p2.x) + Math.abs(p1.y - p2.y);
-	// 	}
-
-	// 	// TODO make routing hueristic prefer straighter lines
-	// 	// TODO prevent routing through lines unless is acceptable
-	// 	function routing_heuristic(p1, p2) {
-	// 		var dist = taxicab_distance(p1, p2);
-	// 		// var isStraight = p1.x == p2.x || p1.y == p2.y;
-	// 		// if (!isStraight)
-	// 		// 	dist += 5 * gridSize;
-
-	// 		var intersects = circuitData.lineIntersects([ p1, p2]);
-	// 		if (intersects) {
-	// 			var relaxedIntersects = circuitData.lineIntersects([ p1, p2 ], ignore_list);
-	// 			if (relaxedIntersects) {
-	// 				dist += 10 * gridSize;
-	// 			} else {
-	// 				dist += 5 * gridSize;
-	// 			}
-	// 		}
-	// 		return dist;
-	// 	}
-
-	// 	var bestStart = {
-	// 		x: Math.round(p1.x / gridSize) * gridSize,
-	// 		y: Math.round(p1.y / gridSize) * gridSize,
-	// 	};
-
-	// 	var bestEnd = {
-	// 		x: Math.round(p2.x / gridSize) * gridSize,
-	// 		y: Math.round(p2.y / gridSize) * gridSize,
-	// 	};
-
-	// 	// function collides(pos) {
-	// 	// 	return circuitData.pointIntersects(pos, ignore_list);
-	// 	// }
-
-	// 	var path = LibAStar(bestStart, bestEnd, min, max, gridSize, routing_heuristic);
-	// 	if (path) {
-	// 		path.push(p1);
-	// 		path.unshift(p2);
-	// 	}
-	// 	return path;
-	// }
-
 	function simple_route_wire(p1, p2, circuitData, fromID, toID) {
 		// try the 2 combinations of component vectors first
 		var p3 = {
@@ -247,29 +204,6 @@
 		console.log("No polyline worked, falling back.");
 		// no polyLine we tried worked, give up and just return any polyline
 		return polyLineList[0];
-	}
-
-	function render_wire(ctx, fromPos, toPos, circuitData, fromID, toID) {
-		var path;
-		// path = astar_route(fromPos, toPos, circuitData, fromID, toID, min, max, gridSize);
-		if (!path) {
-			// console.warn("Could not find shortest path via a-star, falling back to simple_route_wire");
-			path = simple_route_wire(fromPos, toPos, circuitData, fromID, toID);
-		}
-
-		ctx.save();
-		ctx.lineWidth = 1;
-		ctx.beginPath();
-		for (var i = 0; i < path.length-1; i++) {
-			var u = path[i];
-			var v = path[i+1];
-			ctx.moveTo(u.x, u.y);
-			ctx.lineTo(v.x, v.y);
-		};
-		ctx.stroke();
-		ctx.restore();
-
-		return path;
 	}
 
 	function getPinPos(node, pid, circuitDrawer) {
@@ -301,6 +235,60 @@
 		}
 	}
 
+	CircuitDrawer.prototype._renderEdge = function(ctx, fromTuple, toTuple) {
+		var fromID = fromTuple[0];
+		var toID = toTuple[0];
+
+		var p1 = getPinPos(this.circuitData.getNode(fromID), fromTuple[1], this);
+		var p2 = getPinPos(this.circuitData.getNode(toID), toTuple[1], this);
+
+		var path;
+
+		// try the 2 combinations of component vectors first
+		var p3 = {
+			x: (p2.x - p1.x) + p1.x,
+			y: p1.y,
+		};
+		var p4 = {
+			x: p1.x,
+			y: (p2.y - p1.y) + p1.y,
+		};
+
+		var polyLineList = [
+			[ p1, p3, p2 ],
+			[ p1, p4, p2 ],
+		];
+
+		var ignore_list = [ fromID, toID ];
+
+		for (var i = polyLineList.length - 1; i >= 0; i--) {
+			var polyLine = polyLineList[i];
+			if (!this.circuitData.lineIntersects(polyLine, ignore_list)) {
+				path = polyLine;
+			}
+		};
+
+		if (!path) {
+			console.log("No polyline worked, falling back.");
+			// no polyLine we tried worked, give up and just return any polyline
+			path = polyLineList[0];
+		}
+
+		ctx.save();
+		ctx.lineWidth = 1;
+		ctx.beginPath();
+		for (var i = 0; i < path.length-1; i++) {
+			var u = path[i];
+			var v = path[i+1];
+			ctx.moveTo(u.x, u.y);
+			ctx.lineTo(v.x, v.y);
+		};
+		ctx.stroke();
+		ctx.restore();
+
+		return path;
+	}
+
 	CircuitDrawer.prototype._renderEdges = function() {
 		var ctx = this.edgeLayer.getContext("2d");
 
@@ -315,34 +303,27 @@
 		}
 
 		for (var nid in this.circuitData.graph) {
-			var node = this.circuitData.graph[nid];
-			// var pos = node.pos;
-			// var type = this.nodeTypes[node.type];
+			var node = this.circuitData.getNode(nid);
 			for (var pid = node.pins.length - 1; pid >= 0; pid--) {
 				var from = [ nid, pid ];
 				var pin = node.pins[pid];
-				var pin_pos = getPinPos(node, pid, this);
 				for (var j = pin.adj.length - 1; j >= 0; j--) {
 					var to = pin.adj[j];
-					var toID = to[0];
-					var toNode = this.circuitData.getNode(toID);
-					var toPinId = to[1];
-					var toPin = this.circuitData.getPin(toID, toPinId);
-					var toPin_pos = getPinPos(toNode, toPinId, this);
 					if (alreadyRendered(from, to)) continue;
-					var fromOffset = pin_pos;
-					var toOffset = toPin_pos;
-					var edgeID = edgeId(from, to);
-					this._wireLines[edgeID] = render_wire(ctx, fromOffset, toOffset, this.circuitData, nid, toID);
-					rendered_set[edgeID] = true;
+					var eID = edgeId(from, to);
+					this._wireLines[eID] = this._renderEdge(ctx, from, to);
+					rendered_set[eID] = true;
 				}
 
 				// these nodes already have dots
-				var hasDot = node.type == LibCircuit.wireType 
+				if (node.type == LibCircuit.wireType 
 					|| node.type == LibCircuit.inputType 
-					|| node.type == LibCircuit.outputType;
+					|| node.type == LibCircuit.outputType) {
+					continue;
+				}
 
-				if (!hasDot && pin.adj.length >= 3) {
+				if (pin.adj.length >= 3) {
+					var pin_pos = getPinPos(node, pid, this);
 					ctx.save();
 					ctx.beginPath();
 					ctx.arc(pin_pos.x, pin_pos.y, this.pinRadius, 0, 2 * Math.PI);
