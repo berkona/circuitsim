@@ -750,7 +750,23 @@
 
 			lastClickedNode = null;
 		} else if (!closest_pin) {
-			console.warn("Could not find closest connect node");
+			var intersectingEdge = circuitDrawer.pointIntersects(pos, clickBox);
+			if (intersectingEdge) {
+				var fromNID = intersectingEdge.from[0];
+				var fromPID = intersectingEdge.from[1];
+				var toNID = intersectingEdge.to[0];
+				var toPID = intersectingEdge.to[1];
+				// splice node into circuitData
+				circuitData.deleteEdge(fromNID, fromPID, toNID, toPID);
+				var nid = circuitData.addWire(intersectingEdge.from, pos);
+				circuitDrawer.renderNode(circuitData.getNode(nid));
+				lastClickedNode = [ nid, 0 ];
+				circuitData.addEdge(lastClickedNode, intersectingEdge.to);
+				circuitDrawer.renderEdges();
+				uiLayer.addEventListener("mousemove", wire_draw_handler);
+			} else {
+				console.warn("Could not find closest node or edge");
+			}
 		} else { // !lastClickedNode && closest_pin
 			lastClickedNode = closest_pin
 			uiLayer.addEventListener("mousemove", wire_draw_handler);

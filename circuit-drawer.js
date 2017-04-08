@@ -370,8 +370,17 @@
 
 		var seg_v_unit = seg_v.div(seg_v.length());
 		var proj = pt_v.dot(seg_v_unit);
-		var proj_v = seg_v_unit.mult(proj);
-		var closest = proj_v.add(seg_a);
+		var closest;
+		if (proj < 0) {
+			// projection is "before" start of line segment
+			closest = seg_a;
+		} else if (proj > seg_v.length()) {
+			// projection is "after" end of line segment
+			closest = seg_b; 
+		} else {
+			// get vector of projection and convert to world-space
+			closest = seg_v_unit.mult(proj).add(seg_a);
+		}
 		var rejection = cir_pos.sub(closest);
 		return rejection.length() <= radius;
 	}
