@@ -326,7 +326,6 @@
 					var to = pin.adj[j];
 					var toID = to[0];
 					var toNode = this.circuitData.getNode(toID);
-					var toType = this.nodeTypes[toNode.type];
 					var toPinId = to[1];
 					var toPin = this.circuitData.getPin(toID, toPinId);
 					var toPin_pos = getPinPos(toNode, toPinId, this);
@@ -336,6 +335,20 @@
 					var edgeID = edgeId(from, to);
 					this._wireLines[edgeID] = render_wire(ctx, fromOffset, toOffset, this.circuitData, nid, toID);
 					rendered_set[edgeID] = true;
+				}
+
+				// these nodes already have circles
+				var hasDot = node.type == LibCircuit.wireType 
+					|| node.type == LibCircuit.inputType 
+					|| node.type == LibCircuit.outputType;
+
+				if (!hasDot && pin.adj.length >= 3) {
+					ctx.save();
+					ctx.beginPath();
+					ctx.arc(pin_pos.x, pin_pos.y, this.pinRadius, 0, 2 * Math.PI);
+					ctx.fillStyle = "#000";
+					ctx.fill();
+					ctx.restore();
 				}
 			}
 		}
