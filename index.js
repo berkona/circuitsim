@@ -19,7 +19,7 @@
 	var deleteMode = false;
 
 	transistor_types[LibCircuit.pmosType] = {
-		text_pos: [5, 10],
+		text_pos: [5, 12],
 		pins: [
 			[39, 2 ],
 			[1, 22 ],
@@ -28,7 +28,7 @@
 	}
 
 	transistor_types[LibCircuit.nmosType] = {
-		text_pos: [5, 10],
+		text_pos: [5, 12],
 		pins: [
 			[39, 2 ],
 			[1, 22 ],

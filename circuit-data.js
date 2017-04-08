@@ -373,12 +373,6 @@
 		return this._intersects(polyline, polyline_intersects, ignore_list);
 	}
 
-	function point_distance(p1, p2) {
-		var dX = p2.x - p1.x;
-		var dY = p2.y - p1.y;
-		return Math.sqrt(dX * dX + dY * dY);
-	}
-
 	CircuitData.prototype.closestNode = function(pos, maxDist) {
 		for (var nid in this.graph) {
 			var node = this.graph[nid];
@@ -412,6 +406,12 @@
 				y: node.pos.y,
 			};
 		}
+	}
+
+	function point_distance(p1, p2) {
+		var dX = p2.x - p1.x;
+		var dY = p2.y - p1.y;
+		return Math.sqrt(dX * dX + dY * dY);
 	}
 
 	CircuitData.prototype.closestPin = function(pos, maxDist, nodeTypes, ioX) {
