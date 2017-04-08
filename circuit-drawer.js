@@ -354,7 +354,7 @@
 		}
 	}
 
-	function circle_line_distance(center, radius, line) {
+	function circle_line_intersection(center, radius, line) {
 		// finds the intersection between a circle and a line
 		// the circle is assumed to be represented by the center (C, a 2d point vector) and a radius (r, scalar)
 		// the line is assumed to be a 2-tuple of 2d point vectors
@@ -382,35 +382,36 @@
 			closest = seg_v_unit.mult(proj).add(seg_a);
 		}
 		var rejection = cir_pos.sub(closest);
-		return rejection.length();
+		if (rejection.length() <= radius) {
+			return closest;
+		} else {
+			return null;
+		}
 	}
 
 	function circle_polyline_intersects(center, radius, polyline) {
-		var best_dist = radius + 1;
 		for (var i = 0; i < polyline.length - 1; i++) {
-			var dist = circle_line_distance(center, radius, [ polyline[i], polyline[i+1] ])
-			if (dist < best_dist) {
-				best_dist = dist;
+			var intersection = circle_line_intersection(center, radius, [ polyline[i], polyline[i+1] ])
+			if (intersection) {
+				return intersection;
 			}
 		}
-		return best_dist;
+		return null;
 	}
 
 	CircuitDrawer.prototype.pointIntersects = function(point, maxDist) {
-		var best_dist = maxDist + 1;
-		var best_edge = null;
 		for (var edgeID in this._wireLines) {
-			var dist = circle_polyline_intersects(point, maxDist, this._wireLines[edgeID])
-			if (dist < best_dist) {
-				best_dist = dist;
+			var intersection = circle_polyline_intersects(point, maxDist, this._wireLines[edgeID])
+			if (intersection) {
 				var edge = edgeID.split('-');
-				best_edge = {
+				return {
 					from: [ edge[0], edge[1] ],
 					to: [ edge[2], edge[3] ],
+					intersection: intersection,
 				};
 			}
 		}
-		return best_edge;
+		return null;
 	}
 
 	CircuitDrawer.prototype.clear = function() {

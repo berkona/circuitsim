@@ -106,7 +106,7 @@
 
 	function CirclePolyLineIntersection(circle, polyline) {
 		for (var i = polyline.points.length - 1; i > 0; i--) {
-			var closest = CircleLineIntersection(circle, new LibGeom.Line(polyline.lines[i], polyline.lines[i-1]));
+			var closest = CircleLineIntersection(circle, new LibGeom.Line(polyline.points[i], polyline.points[i-1]));
 			if (closest)
 				return closest;
 		};

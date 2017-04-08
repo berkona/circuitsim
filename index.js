@@ -731,37 +731,32 @@
 				circuitDrawer.renderEdges();
 			}
 			else if (!circuitData.pointIntersects(pos)) {
-				var nid = circuitData.addWire(lastClickedNode, pos);
-				circuitDrawer.renderNode(circuitData.getNode(nid));
-				var intersectingEdge = circuitDrawer.pointIntersects(pos, clickBox);
-				if (intersectingEdge) {
-					var fromNID = intersectingEdge.from[0];
-					var fromPID = intersectingEdge.from[1];
-					var toNID = intersectingEdge.to[0];
-					var toPID = intersectingEdge.to[1];
-					var newEdgePoint = [ nid, 0 ];
+				var nid;
+				var result = circuitDrawer.pointIntersects(pos, clickBox);
+				if (result) {
+					nid = circuitData.addWire(lastClickedNode, result.intersection);
 					// splice node into circuitData
-					circuitData.deleteEdge(fromNID, fromPID, toNID, toPID);
-					circuitData.addEdge(intersectingEdge.from, newEdgePoint);
-					circuitData.addEdge(newEdgePoint, intersectingEdge.to);
+					circuitData.deleteEdge(result.from[0], result.from[1], result.to[0], result.to[1]);
+					var newEdgePoint = [ nid, 0 ];
+					circuitData.addEdge(result.from, newEdgePoint);
+					circuitData.addEdge(newEdgePoint, result.to);
+				} else {
+					nid = circuitData.addWire(lastClickedNode, pos);
 				}
+				circuitDrawer.renderNode(circuitData.getNode(nid));
 				circuitDrawer.renderEdges();
 			}
 
 			lastClickedNode = null;
 		} else if (!closest_pin) {
-			var intersectingEdge = circuitDrawer.pointIntersects(pos, clickBox);
-			if (intersectingEdge) {
-				var fromNID = intersectingEdge.from[0];
-				var fromPID = intersectingEdge.from[1];
-				var toNID = intersectingEdge.to[0];
-				var toPID = intersectingEdge.to[1];
+			var result = circuitDrawer.pointIntersects(pos, clickBox);
+			if (result) {
 				// splice node into circuitData
-				circuitData.deleteEdge(fromNID, fromPID, toNID, toPID);
-				var nid = circuitData.addWire(intersectingEdge.from, pos);
+				circuitData.deleteEdge(result.from[0], result.from[1], result.to[0], result.to[1]);
+				var nid = circuitData.addWire(result.from, result.intersection);
 				circuitDrawer.renderNode(circuitData.getNode(nid));
 				lastClickedNode = [ nid, 0 ];
-				circuitData.addEdge(lastClickedNode, intersectingEdge.to);
+				circuitData.addEdge(lastClickedNode, result.to);
 				circuitDrawer.renderEdges();
 				uiLayer.addEventListener("mousemove", wire_draw_handler);
 			} else {
