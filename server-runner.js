@@ -12,17 +12,80 @@ if (process.argv.length != 3) {
 	main();
 }
 
+function convertToColumns(header, rows) {
+	// convert from row-based matrix to column based matrix;
+	var col_matrix = [];
+	for (var i = 0; i < header.length; i++) {
+		var col = [ header[i] ];
+		for (var j = 0; j < rows.length; j++) {
+			col.push(rows[j][i]);
+		};
+		col_matrix.push(col);
+	};
+	return col_matrix;
+}
+
+function convertToRows(col_matrix) {
+	var row_matrix = [];
+	var width = col_matrix.length;
+	var height = col_matrix[0].length;
+	for (var i = 0; i < height; i++) {
+		var row = [];
+		for (var j = 0; j < width; j++) {
+			row.push(col_matrix[j][i]);
+		};
+		row_matrix.push(row);
+	};
+	return row_matrix;
+}
+
 function main() {
 	var fName = process.argv[2];
-	var result = runSimulation(fName);
+	try {
+		var result = runSimulation(fName);
+	} catch (err) {
+		console.log("runSimulation failed with message:");
+		console.log(err.message);
+		return;
+	}
 
-	result.inputs.sort();
-	result.outputs.sort();
+	// inputs are guaranteed to come first by LibCircuit's behavior, no need to slice
+	var input_cols = convertToColumns(result.inputs, result.rows);
+	// have to slice the rows here though
+	var outputs_cols = convertToColumns(result.outputs, result.rows.map(function (x) {
+		return x.slice(result.inputs.length, x.length);
+	}));
 
-	console.log(result.inputs.join(' ') + ' ' + result.outputs.join(' '));
-	for (var i = 0; i < result.rows.length; i++) {
-		console.log(result.rows[i].join(' '));
-	};
+	function sortCols(a, b) {
+		if (a[0] < b[0]) {
+			return -1;
+		} else if (a[0] > b[0]) {
+			return 1;
+		} else {
+			return 0;
+		}
+	}
+	// sort based on lexographic ordering of header
+	// indepedently sort input and output so that inputs are always before outputs
+	input_cols.sort(sortCols);
+	outputs_cols.sort(sortCols);
+
+	var input_rows = convertToRows(input_cols);
+	var output_rows = convertToRows(outputs_cols);
+
+	// if this is not true bad things will happen on output
+	if (input_rows.length !== output_rows.length){
+		return console.log("Something horrible happened, input_rows !== output_rows");
+	}
+
+	// spiffy one liner printing for a matrix
+	console.log(
+		input_rows.map(function (row, idx) {
+			return row.concat(output_rows[idx]);
+		}).map(function (row) {
+			return row.join(' ');
+		}).join('\n')
+	);
 }
 
 function runSimulation(fname) {
@@ -33,9 +96,7 @@ function runSimulation(fname) {
 
 	var verifiedResult = LibCircuit.runAllChecks(circuitData.graph);
 	if (verifiedResult) {
-		console.log("Circuit was not able to be verified:");
-		console.log(verifiedResult[0] + " returned error: " +verifiedResult[1]);
-		return;
+		throw new Error("Circuit was not able to be verified: " + verifiedResult[0] + " returned error " +verifiedResult[1]);
 	}
 
 	var result;
