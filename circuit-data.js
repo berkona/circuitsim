@@ -287,14 +287,14 @@
 			});
 		}
 
+		var nIntercepts = 0;
 		for (var i = nids.length - 1; i >= 0; i--) {
 			var rect = this.graph[nids[i]].rect;
 			if (rect == null) continue;
 			if (rejection_func(object, rect))
-				return true;
+				nIntercepts++;
 		};
-
-		return false;
+		return nIntercepts;
 	}
 
 	function rect_intersects(r1, r2) {

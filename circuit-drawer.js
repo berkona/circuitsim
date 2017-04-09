@@ -36,7 +36,6 @@
 
 	CircuitDrawer.prototype.renderAll = function(types) {
 		this.renderIO();
-		this.renderEdges();
 		for (var nid in this.circuitData.graph) {
 			var node = this.circuitData.graph[nid];
 			if (node.type == LibCircuit.inputType || node.type == LibCircuit.outputType)
@@ -45,6 +44,7 @@
 			var drawText = node.type != LibCircuit.wireType;
 			this.renderNode(node, img, drawText);
 		}
+		this.renderEdges();
 	}
 
 	CircuitDrawer.prototype.renderIO = function() {
@@ -169,36 +169,6 @@
 		this._wireLines = {};
 	}
 
-	function simple_route_wire(p1, p2, circuitData, fromID, toID) {
-		// try the 2 combinations of component vectors first
-		var p3 = {
-			x: (p2.x - p1.x) + p1.x,
-			y: p1.y,
-		};
-		var p4 = {
-			x: p1.x,
-			y: (p2.y - p1.y) + p1.y,
-		};
-
-		var polyLineList = [
-			[ p1, p3, p2 ],
-			[ p1, p4, p2 ],
-		];
-
-		var ignore_list = [ fromID, toID ];
-
-		for (var i = polyLineList.length - 1; i >= 0; i--) {
-			var polyLine = polyLineList[i];
-			if (!circuitData.lineIntersects(polyLine, ignore_list)) {
-				return polyLine;
-			}
-		};
-
-		console.log("No polyline worked, falling back.");
-		// no polyLine we tried worked, give up and just return any polyline
-		return polyLineList[0];
-	}
-
 	function getPinPos(node, pid, circuitDrawer) {
 		var pos = node.pos;
 		var type = circuitDrawer.nodeTypes[node.type];
@@ -255,11 +225,13 @@
 
 		var ignore_list = [ fromID, toID ];
 
+		var minIntercepts = Number.POSITIVE_INFINITY;
 		for (var i = polyLineList.length - 1; i >= 0; i--) {
 			var polyLine = polyLineList[i];
-			if (!this.circuitData.lineIntersects(polyLine, ignore_list) && !this.polyLineIntersects(polyLine)) {
+			var intecepts = this.circuitData.lineIntersects(polyLine, ignore_list) + this.polyLineIntersects(polyLine, ignore_list)
+			if (intecepts < minIntercepts) {
+				minIntercepts = intecepts;
 				path = polyLine;
-				break;
 			}
 		};
 
@@ -284,14 +256,14 @@
 		return path;
 	}
 
+	function edgeId(from, to) {
+		return from[0]+"-"+from[1]+"-"+to[0]+"-"+to[1];
+	}
+
 	CircuitDrawer.prototype._renderEdges = function() {
 		var ctx = this.edgeLayer.getContext("2d");
 
 		var rendered_set = {};
-
-		function edgeId(from, to) {
-			return from[0]+"-"+from[1]+"-"+to[0]+"-"+to[1];
-		}
 
 		function alreadyRendered(from, to) {
 			return rendered_set[edgeId(from, to)] || rendered_set[edgeId(to, from)]
@@ -311,8 +283,8 @@
 				}
 
 				if (node.type == LibCircuit.inputType 
-					|| node.type == LibCircuit.outputType 
-					|| pin.adj.length < 3
+				 || node.type == LibCircuit.outputType 
+				 || pin.adj.length < 3
 				) continue;
 
 				var pin_pos = getPinPos(node, pid, this);
@@ -371,15 +343,18 @@
 		return null;
 	}
 
-	CircuitDrawer.prototype.polyLineIntersects = function(points) {
+	CircuitDrawer.prototype.polyLineIntersects = function(points, ignore_list) {
+		if (!ignore_list) ignore_list = [];
+		var nIntercepts = 0;
 		var a = new LibGeom.PolyLine(points);
 		for (var edgeID in this._wireLines) {
+			var e = edgeID.split('-');
+			if (ignore_list.indexOf(e[0]) !== -1 || ignore_list.indexOf(e[2]) !== -1) continue;
 			var b = new LibGeom.PolyLine(this._wireLines[edgeID]);
-			var intercept = LibGeom.PolyLineIntersection(a, b);
-			if (intercept)
-				return intercept;
+			if (LibGeom.PolyLineIntersection(a, b))
+				nIntercepts++;
 		}
-		return null;
+		return nIntercepts;
 	}
 
 	CircuitDrawer.prototype.pointIntersects = function(point, maxDist) {

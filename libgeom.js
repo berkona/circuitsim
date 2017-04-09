@@ -42,7 +42,11 @@
 		this.from = from;
 		this.to = to;
 		this.slope = (to.y - from.y) / (to.x - from.x);
-		this.intercept = from.y - this.slope * from.x;
+		if (Number.isFinite(this.slope)) {
+			this.intercept = from.y - this.slope * from.x;
+		} else {
+			this.intercept = from.x;
+		}
 	};
 
 	root.Line = Line;
@@ -115,37 +119,53 @@
 		return null;
 	}
 
+	function FloatCMP(a, b, maxDist) {
+		if (!maxDist) maxDist = 0.001;
+		return Math.abs(a - b) <= maxDist
+	}
+
 	root.CirclePolyLineIntersection = CirclePolyLineIntersection;
 
-	function LineIntersection(lineA, lineB) {
-		if (lineA.slope == lineB.slope)
-			return null;
-		var x = (lineB.intercept - lineA.intercept) / (lineA.slope - lineB.slope);
-		var y = lineA.slope * x + lineA.intercept;
-
-		if (x >= lineA.from.x 
-			&& x <= lineA.to.x 
-			&& y >= lineA.from.y 
-			&& y <= lineA.to.y
-			&& x >= lineB.from.x 
-			&& x <= lineB.to.x
-			&& y >= lineB.from.y
-			&& y <= lineB.to.y
-		) {
-			return new LibGeom.Vector2(x, y);
-		} else {
-			return null;
+	function OnSegment(p, q, r) {
+		if (q.x < Math.max(p.x, r.x) && q.x > Math.min(p.x, r.x)
+			&& q.y < Math.max(p.y, r.y) && q.y > Math.min(p.y, r.y)) {
+			return true;
 		}
+		return false;
+	}
+
+	function Orientation(p, q, r) {
+		var val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);
+		if (val == 0) return 0;  // colinear
+		return (val > 0)? 1: 2; // clock or counterclock wise
+	}
+
+	function LineIntersection(p1, q1, p2, q2) {
+		var o1 = Orientation(p1, q1, p2);
+		var o2 = Orientation(p1, q1, q2);
+		var o3 = Orientation(p2, q2, p1);
+		var o4 = Orientation(p2, q2, q1);
+
+		if (o1 != o2 && o3 != o4)
+			return true;
+
+		if (o1 == 0 && OnSegment(p1, p2, q1))
+			return true;
+		if (o2 == 0 && OnSegment(p1, q2, q1))
+			return true;
+		if (o3 == 0 && OnSegment(p2, p1, q2))
+			return true;
+		if (o4 == 0 && OnSegment(p2, q1, q2))
+			return true;
+
+		return false;
 	}
 
 	function PolyLineIntersection(a, b) {
 		for (var i = a.points.length-1; i > 0; i--) {
-			var aLine = new LibGeom.Line(a.points[i], a.points[i-1]);
 			for (var j = b.points.length-1; j > 0; j--) {
-				var bLine = new LibGeom.Line(b.points[i], b.points[i-1]);
-				var intercept = LineIntersection(aLine, bLine);
-				if (intercept)
-					return intercept;
+				var intercept = LineIntersection(a.points[i], a.points[i-1], b.points[j], b.points[j-1]);
+				if (intercept) return intercept;
 			}
 		}
 	}
