@@ -135,13 +135,6 @@
 
 		if (img) {
 			ctx.drawImage(img, pos.x, pos.y);
-		} else {
-			ctx.save();
-			ctx.beginPath();
-			ctx.arc(pos.x, pos.y, this.pinRadius, 0, 2 * Math.PI);
-			ctx.fillStyle = "#000";
-			ctx.fill();
-			ctx.restore();
 		}
 
 		if (drawText) {
@@ -317,22 +310,18 @@
 					rendered_set[eID] = true;
 				}
 
-				// these nodes already have dots
-				if (node.type == LibCircuit.wireType 
-					|| node.type == LibCircuit.inputType 
-					|| node.type == LibCircuit.outputType) {
-					continue;
-				}
+				if (node.type == LibCircuit.inputType 
+					|| node.type == LibCircuit.outputType 
+					|| pin.adj.length < 3
+				) continue;
 
-				if (pin.adj.length >= 3) {
-					var pin_pos = getPinPos(node, pid, this);
-					ctx.save();
-					ctx.beginPath();
-					ctx.arc(pin_pos.x, pin_pos.y, this.pinRadius, 0, 2 * Math.PI);
-					ctx.fillStyle = "#000";
-					ctx.fill();
-					ctx.restore();
-				}
+				var pin_pos = getPinPos(node, pid, this);
+				ctx.save();
+				ctx.beginPath();
+				ctx.arc(pin_pos.x, pin_pos.y, this.pinRadius, 0, 2 * Math.PI);
+				ctx.fillStyle = "#000";
+				ctx.fill();
+				ctx.restore();
 			}
 		}
 	}
