@@ -107,7 +107,7 @@
 	};
 
 	gate_types[LibCircuit.inverterType] = {
-		text_pos: [19, 17],
+		text_pos: [16, 17],
 		pins: [
 			[1, 13  ],
 			[60, 13 ],
@@ -150,6 +150,13 @@
 					circuitData.clear();
 					circuitData.import(data, getBoundingBox);
 
+					if (circuitData.simType == CircuitData.SIM_TYPE_TRANSISTOR) {
+						show_transistor_panel();
+					} else if (circuitData.simType == CircuitData.SIM_TYPE_GATE) {
+						show_gate_panel();
+					} else {
+						console.warn("Invalid simType in circuitData");
+					}
 					circuitDrawer.clear();
 					circuitDrawer.renderAll(getImageMap());
 					

@@ -41,6 +41,8 @@
 			return new Line(x, y);
 		this.from = from;
 		this.to = to;
+		this.slope = (to.y - from.y) / (to.x - from.x);
+		this.intercept = from.y - this.slope * from.x;
 	};
 
 	root.Line = Line;
@@ -114,6 +116,41 @@
 	}
 
 	root.CirclePolyLineIntersection = CirclePolyLineIntersection;
+
+	function LineIntersection(lineA, lineB) {
+		if (lineA.slope == lineB.slope)
+			return null;
+		var x = (lineB.intercept - lineA.intercept) / (lineA.slope - lineB.slope);
+		var y = lineA.slope * x + lineA.intercept;
+
+		if (x >= lineA.from.x 
+			&& x <= lineA.to.x 
+			&& y >= lineA.from.y 
+			&& y <= lineA.to.y
+			&& x >= lineB.from.x 
+			&& x <= lineB.to.x
+			&& y >= lineB.from.y
+			&& y <= lineB.to.y
+		) {
+			return new LibGeom.Vector2(x, y);
+		} else {
+			return null;
+		}
+	}
+
+	function PolyLineIntersection(a, b) {
+		for (var i = a.points.length-1; i > 0; i--) {
+			var aLine = new LibGeom.Line(a.points[i], a.points[i-1]);
+			for (var j = b.points.length-1; j > 0; j--) {
+				var bLine = new LibGeom.Line(b.points[i], b.points[i-1]);
+				var intercept = LineIntersection(aLine, bLine);
+				if (intercept)
+					return intercept;
+			}
+		}
+	}
+
+	root.PolyLineIntersection = PolyLineIntersection;
 
 	// running in node.js
 	if (typeof window === 'undefined') {

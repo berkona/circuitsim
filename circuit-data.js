@@ -149,7 +149,6 @@
 			pos: null,
 			rect: null,
 			pins: [{
-				// pos: null,
 				adj: [],
 			}]
 		}
@@ -184,7 +183,6 @@
 				height: 2 * wireSize,
 			},
 			pins: [{
-				// pos: pos,
 				adj: [],
 			}],
 		};
@@ -208,21 +206,12 @@
 			nid: nid,
 			type: tid,
 			pos: pos,
-			// text_pos: {
-			// 	x: pos.x + type.text_pos[0],
-			// 	y: pos.y + type.text_pos[1],
-			// },
 			rect: rect,
 			pins: [],
 		}
 
 		for (var i = 0; i < type.pins.length; i++) {
-			// var pin_pos = type.pins[i];
 			var pin = {
-				// pos: {
-				// 	x: pos.x + pin_pos[0],
-				// 	y: pos.y + pin_pos[1],
-				// },
 				adj: [],
 			};
 
@@ -485,7 +474,7 @@
 		return data;
 	}
 
-	var latest_file_version = "5";
+	var latest_file_version = "6";
 
 	var converter_map = {
 		"0": version_0_converter,
@@ -493,6 +482,7 @@
 		"2": version_2_converter,
 		"3": version_3_converter,
 		"4": version_4_converter,
+		"5": version_5_converter,
 	};
 
 	// version 1 reduces file size by removing redundant data
@@ -545,6 +535,40 @@
 			};
 		}
 		data.version = "5";
+		return data;
+	}
+
+	function transform_position(pos, oldRect, newRect) {
+		return {
+			x: (pos.x - oldRect.minX) * (newRect.maxX - newRect.minX) / (oldRect.maxX - oldRect.minX) + newRect.minX,
+			y: (pos.y - oldRect.minY) * (newRect.maxY - newRect.minY) / (oldRect.maxY - oldRect.minY) + newRect.minY
+		};
+	}
+
+	// version 6 changed size of canvas
+	function version_5_converter(data) {
+		var oldRect = {
+			minX: 0,
+			maxX: 640,
+			minY: 0,
+			maxY: 480,
+		};
+		var newRect = {
+			minX: 0,
+			maxX: 800,
+			minY: 0,
+			maxY: 600,
+		};
+		for (var nid in data.graph) {
+			var node = data.graph[nid];
+			node.pos = transform_position(node.pos, oldRect, newRect);
+			// no idea why wireType nodes are off by 11 px
+			if (node.type == LibCircuit.wireType) {
+				node.pos.x -= 11;
+			}
+			data.graph[nid] = node;
+		}
+		data.version = "6";
 		return data;
 	}
 

@@ -225,13 +225,13 @@
 			return {
 				x: pos.x - circuitDrawer.pinRadius,
 				y: pos.y
-			}
+			};
 		} 
 		else {
 			return {
 				x: pos.x,
 				y: pos.y,
-			}
+			};
 		}
 	}
 
@@ -249,6 +249,7 @@
 			x: (p2.x - p1.x) + p1.x,
 			y: p1.y,
 		};
+
 		var p4 = {
 			x: p1.x,
 			y: (p2.y - p1.y) + p1.y,
@@ -263,8 +264,9 @@
 
 		for (var i = polyLineList.length - 1; i >= 0; i--) {
 			var polyLine = polyLineList[i];
-			if (!this.circuitData.lineIntersects(polyLine, ignore_list)) {
+			if (!this.circuitData.lineIntersects(polyLine, ignore_list) && !this.polyLineIntersects(polyLine)) {
 				path = polyLine;
+				break;
 			}
 		};
 
@@ -376,6 +378,17 @@
 			if (intersection) {
 				return intersection;
 			}
+		}
+		return null;
+	}
+
+	CircuitDrawer.prototype.polyLineIntersects = function(points) {
+		var a = new LibGeom.PolyLine(points);
+		for (var edgeID in this._wireLines) {
+			var b = new LibGeom.PolyLine(this._wireLines[edgeID]);
+			var intercept = LibGeom.PolyLineIntersection(a, b);
+			if (intercept)
+				return intercept;
 		}
 		return null;
 	}
