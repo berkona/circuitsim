@@ -282,9 +282,9 @@
 					rendered_set[eID] = true;
 				}
 
-				if (node.type == LibCircuit.inputType 
-				 || node.type == LibCircuit.outputType 
-				 || pin.adj.length < 3
+				if (node.type === LibCircuit.inputType 
+				 || node.type === LibCircuit.outputType 
+				 || (pin.adj.length > 0 && pin.adj.length < 3)
 				) continue;
 
 				var pin_pos = getPinPos(node, pid, this);
