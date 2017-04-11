@@ -1,6 +1,13 @@
 Go to tests/quizzes.  Click on submissions for assignment.  Go to export.  Save as xls file.
 
-Open xls file in Excel/OpenOffice.  Click on File->Save as...->Save as csv file in a folder
+Open xls file in Excel/OpenOffice.  Click on File->Save as...->Save as csv file in a folder.
+Use single quote as text delimiter b/c double quote will cause issues with proper quoting (output from circuit is proper JSON)
 
-Split csv by submission && part
+Open up grading_script
+Ensure that the values of ID_FIELD is correct and SUBMISSION_FIELD_NAME are correct
+Ensure that AUTOGRADE_PARTS is equivalent to the parts in Sakai you want graded
+Run grading script with the following params:
 
+./grading_script <CSV_EXPORTED_FILE> RESPONSE_TMP_DIR ANSWER_DIR
+
+Output is similar to lab grading script

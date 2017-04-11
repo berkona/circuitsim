@@ -45,7 +45,7 @@ function main() {
 		var result = runSimulation(fName);
 	} catch (err) {
 		console.log("runSimulation failed with message:");
-		console.log(err.message);
+		console.log(err);
 		return;
 	}
 

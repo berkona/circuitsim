@@ -2,6 +2,14 @@
 
 	"use strict";
 
+	//polyfill for getting LibCircuit on node vs browser
+	var LibCircuit;
+	if (typeof window === 'undefined') {
+		LibCircuit = require("./libcircuit");
+	} else {
+		LibCircuit = window.LibCircuit;
+	}
+
 	// handles data book-keeping for Circuits, can be exported to json-able file
 	function CircuitData(simType) {
 		// for compatibility with legacy code
