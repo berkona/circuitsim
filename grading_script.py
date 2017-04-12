@@ -126,5 +126,4 @@ def main():
 			for idx, questionName in answer_fields:
 				gradeResponse(studentID, row[idx], questionName, gradingDir, answerDir)
 
-
 main()
