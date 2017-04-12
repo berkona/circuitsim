@@ -1,1 +1,0 @@
-../js-astar/libastar.js
