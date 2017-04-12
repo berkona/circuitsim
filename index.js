@@ -126,10 +126,25 @@
 
 	var template_dir = "templates/"
 
-	$(document).ready(load_doc)
-	// use window.onload not ready, because some of the images might not be ready
+	var window_loaded = false;
+	var document_loaded = false;
 
-	$(window).on("load", load_template)
+	$(document).ready(function () {
+		document_loaded = true;
+		bootstrap();
+	});
+
+	$(window).on('load', function() {
+		window_loaded = true;
+		bootstrap();
+	});
+
+	function bootstrap() {
+		if (window_loaded && document_loaded) {
+			load_doc();
+			load_template();
+		}
+	}
 
 	function load_template() {
 		var template = getUrlParameter('template')
@@ -189,7 +204,6 @@
 
 		render_complete_grid();
 
-		// starts loading our images, we have to wait until they are loaded to call load_template
 		load_transistor_panel();
 		load_gate_panel();
 
