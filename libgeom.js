@@ -4,7 +4,7 @@
 	var root = {};
 
 	function Vector2(x, y) {
-		if (!this instanceof Vector2)
+		if (!(this instanceof Vector2))
 			return new Vector2(x, y);
 		this.x = x;
 		this.y = y;
@@ -57,8 +57,15 @@
 	root.Vector2 = Vector2;
 
 	function Line(from, to) {
-		if (!this instanceof Line)
+		if (!(this instanceof Line))
 			return new Line(x, y);
+		
+		if (!(from instanceof Vector2))
+			from = new Vector2(from.x, from.y)
+
+		if (!(to instanceof Vector2))
+			to = new Vector2(to.x, to.y)
+
 		this.from = from;
 		this.to = to;
 	}
@@ -66,8 +73,15 @@
 	root.Line = Line;
 
 	function PolyLine(points) {
-		if (!this instanceof PolyLine)
+		if (!(this instanceof PolyLine))
 			return new PolyLine(points);
+
+		points = points.map(function (p) {
+			if (!(p instanceof Vector2))
+				p = new Vector2(p.x, p.y);
+			return p;
+		});
+
 		this.points = points;
 		this.lines = [];
 		for (var i = points.length - 1; i > 0; i--) {
@@ -78,7 +92,7 @@
 	root.PolyLine = PolyLine;
 
 	function Rect(x, y, width, height) {
-		if (!this instanceof Rect)
+		if (!(this instanceof Rect))
 			return new Rect(x, y, width, height);
 
 		this.x = x;
@@ -98,8 +112,12 @@
 	root.Rect = Rect;
 
 	function Circle(pos, radius) {
-		if (!this instanceof Circle)
+		if (!(this instanceof Circle))
 			return new Circle(pos, radius)
+
+		if (!(pos instanceof Vector2))
+			pos = new Vector2(pos.x, pos.y)
+
 		this.pos = pos;
 		this.radius = radius;
 	}
@@ -122,7 +140,7 @@
 	}
 
 	function Intersection(point, distance) {
-		if (!this instanceof Intersection)
+		if (!(this instanceof Intersection))
 			return new Intersection(point, distance)
 		this.point = point;
 		this.distance = distance;

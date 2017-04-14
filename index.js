@@ -456,18 +456,20 @@
 	function undo_action() {
 		if (!circuitData.canUndo()) return;
 		var result = circuitData.undo();
-		var type = result[0];
-		if (type == 'node') {
-			circuitDrawer.deleteNode(result[1]);
-		} else if (type == 'edge') {
-			circuitDrawer.renderEdges();
-		} else if (type == 'io') {
-			circuitDrawer.renderIO();
-			circuitDrawer.renderEdges();
-			io_changed();
-		} else {
-			console.warn("Got unknown undo type back from circuitData");
-		}
+		circuitDrawer.clear();
+		circuitDrawer.renderAll(getImageMap());
+		// var type = result[0];
+		// if (type == 'node') {
+		// 	circuitDrawer.deleteNode(result[1]);
+		// } else if (type == 'edge') {
+		// 	circuitDrawer.renderEdges();
+		// } else if (type == 'io') {
+		// 	circuitDrawer.renderIO();
+		// 	circuitDrawer.renderEdges();
+		// 	io_changed();
+		// } else {
+		// 	console.warn("Got unknown undo type back from circuitData");
+		// }
 	}
 
 	function io_changed() {
