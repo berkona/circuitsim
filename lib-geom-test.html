@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<meta charset="utf-8">
+
+<title>Circuit Simulator</title>
+
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+<meta content="utf-8" http-equiv="encoding">
+	
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js" integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8=" crossorigin="anonymous"></script>
+
+<script type="text/javascript" src="libgeom.js"></script>
+
+<script type="text/javascript">
+	$(document).ready(function () {
+		var canvas = document.getElementById("canvas");
+		var width = canvas.width;
+		var height = canvas.height;
+		var rectHeight = 100;
+		var rectWidth = 100;
+		var circleRadius = 25;
+
+		var ctx = canvas.getContext("2d");
+
+		var canvasOffset = $("#canvas").offset()
+
+		var target = new LibGeom.Rect((width/2)-rectWidth/2, (height/2)-rectHeight/2, rectWidth, rectHeight);
+		var targetDrawFn = drawTargetRect;
+
+		var activeUpdateFn = updateCircle;
+		var activeDrawFn = drawCircle;
+		var activeLineStart = pointCircle;
+
+		function pointCircle(circle) {
+			return circle.pos;
+		}
+		
+		function pointRect(rect) {
+			return rect.topLeft;
+		}
+
+		function updateCircle(x, y) {
+			return new LibGeom.Circle(new LibGeom.Vector2(x, y), circleRadius);
+		}
+
+		function updateRect(x, y) {
+			return new LibGeom.Rect(x, y, rectWidth, rectHeight);
+		}
+
+		function drawTargetRect(rect) {
+			ctx.save();
+			ctx.fillStyle = 'green';
+			ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
+			ctx.restore();
+		}
+
+		function drawRect(rect, closest) {
+			ctx.save();
+			if (closest) {
+				ctx.fillStyle = 'red';
+				ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
+			} else {
+				ctx.strokeStyle = 'black';
+				ctx.strokeRect(rect.x, rect.y, rect.width, rect.height);
+			}
+			ctx.restore();
+		}
+
+		function drawCircle(circle, closest) {
+			ctx.save();
+			ctx.beginPath();
+			ctx.arc(circle.pos.x, circle.pos.y, circle.radius, 0, 2*Math.PI);
+			if (closest) {
+				ctx.fillStyle = 'red';
+				ctx.fill();
+			} 
+			else {
+				ctx.strokeStyle = 'black';
+				ctx.stroke();
+			}
+			ctx.restore();
+		}
+
+		function drawLine(from, to) {
+			ctx.save();
+			ctx.strokeStyle = 'black';
+			ctx.beginPath();
+			ctx.moveTo(from.x, from.y);
+			ctx.lineTo(to.x, to.y);
+			ctx.stroke();
+			ctx.restore();
+		}
+
+		var targetSelect = $("#target-shape");
+		targetSelect.change(function () {
+			var v = targetSelect.val();
+			if (v == "rect") {
+				target = new LibGeom.Rect((width/2)-rectWidth/2, (height/2)-rectHeight/2, rectWidth, rectHeight);
+				targetDrawFn = drawTargetRect;
+			}
+			else {
+				console.warn("Invalid value for active shape");
+			}
+		});
+		targetSelect.val("rect");
+
+		var activeSelect = $("#active-shape");
+		activeSelect.change(function () {
+			var v = activeSelect.val();
+			if (v == "rect") {
+				activeUpdateFn = updateRect;
+				activeDrawFn = drawRect;
+				activeLineStart = pointRect;
+			} 
+			else if (v == "circle") {
+				activeUpdateFn = updateCircle;
+				activeDrawFn = drawCircle;
+				activeLineStart = pointCircle;
+			} 
+			else {
+				console.warn("Invalid value for active shape");
+			}
+		});
+		activeSelect.val("circle");
+
+		$("#canvas").on("mousemove", function (eventData) {
+			var x = eventData.pageX - canvasOffset.left;
+			var y = eventData.pageY - canvasOffset.top;
+			ctx.clearRect(0, 0, width, height);
+			targetDrawFn(target);
+			active = activeUpdateFn(x, y);
+			var closest = LibGeom.Intersects(active, target);
+			activeDrawFn(active, closest);
+			if (closest) {
+				drawLine(activeLineStart(active), closest.point);
+			}
+		});
+	});
+</script>
+</head>
+<body>
+	<div>
+		<p>Target Shape</p>
+		<select id="target-shape">
+			<option value="rect">Rect</option>
+		</select>
+	</div>
+	<div>
+		<p>Active Shape</p>
+		<select id="active-shape">
+			<option value="circle">Circle</option>
+			<option value="rect">Rect</option>
+		</select>
+	</div>
+	<canvas id="canvas" width="800" height="600"></canvas>
+</body>
+</html>

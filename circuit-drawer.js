@@ -298,51 +298,6 @@
 		}
 	}
 
-	function circle_line_intersection(center, radius, line) {
-		// finds the intersection between a circle and a line
-		// the circle is assumed to be represented by the center (C, a 2d point vector) and a radius (r, scalar)
-		// the line is assumed to be a 2-tuple of 2d point vectors
-		var seg_a = new LibGeom.Vector2(line[0].x, line[0].y);
-		var seg_b = new LibGeom.Vector2(line[1].x, line[1].y);
-		var cir_pos = new LibGeom.Vector2(center.x, center.y);
-
-		// find the vector A -> B
-		var seg_v = seg_b.sub(seg_a);
-
-		// find the vector A -> C
-		var pt_v = cir_pos.sub(seg_a);
-
-		var seg_v_unit = seg_v.div(seg_v.length());
-		var proj = pt_v.dot(seg_v_unit);
-		var closest;
-		if (proj < 0) {
-			// projection is "before" start of line segment
-			closest = seg_a;
-		} else if (proj > seg_v.length()) {
-			// projection is "after" end of line segment
-			closest = seg_b; 
-		} else {
-			// get vector of projection and convert to world-space
-			closest = seg_v_unit.mult(proj).add(seg_a);
-		}
-		var rejection = cir_pos.sub(closest);
-		if (rejection.length() <= radius) {
-			return closest;
-		} else {
-			return null;
-		}
-	}
-
-	function circle_polyline_intersects(center, radius, polyline) {
-		for (var i = 0; i < polyline.length - 1; i++) {
-			var intersection = circle_line_intersection(center, radius, [ polyline[i], polyline[i+1] ])
-			if (intersection) {
-				return intersection;
-			}
-		}
-		return null;
-	}
-
 	CircuitDrawer.prototype.polyLineIntersects = function(points, ignore_list) {
 		if (!ignore_list) ignore_list = [];
 		var nIntercepts = 0;
@@ -351,21 +306,22 @@
 			var e = edgeID.split('-');
 			if (ignore_list.indexOf(e[0]) !== -1 || ignore_list.indexOf(e[2]) !== -1) continue;
 			var b = new LibGeom.PolyLine(this._wireLines[edgeID]);
-			if (LibGeom.PolyLineIntersection(a, b))
+			if (LibGeom.Intersects(a, b))
 				nIntercepts++;
 		}
 		return nIntercepts;
 	}
 
 	CircuitDrawer.prototype.pointIntersects = function(point, maxDist) {
+		var circle = new LibGeom.Circle(point, maxDist);
 		for (var edgeID in this._wireLines) {
-			var intersection = circle_polyline_intersects(point, maxDist, this._wireLines[edgeID])
+			var intersection = LibGeom.Intersects(circle, new LibGeom.PolyLine(this._wireLines[edgeID]));
 			if (intersection) {
 				var edge = edgeID.split('-');
 				return {
 					from: [ edge[0], edge[1] ],
 					to: [ edge[2], edge[3] ],
-					intersection: intersection,
+					intersection: intersection.point,
 				};
 			}
 		}
