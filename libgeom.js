@@ -58,7 +58,7 @@
 
 	function Line(from, to) {
 		if (!(this instanceof Line))
-			return new Line(x, y);
+			return new Line(from, to);
 		
 		if (!(from instanceof Vector2))
 			from = new Vector2(from.x, from.y)
@@ -76,6 +76,8 @@
 		if (!(this instanceof PolyLine))
 			return new PolyLine(points);
 
+		if (!points) points = []
+
 		points = points.map(function (p) {
 			if (!(p instanceof Vector2))
 				p = new Vector2(p.x, p.y);
@@ -85,7 +87,7 @@
 		this.points = points;
 		this.lines = [];
 		for (var i = points.length - 1; i > 0; i--) {
-			this.lines.push(new LibGeom.Line(points[i], points[i-1]));
+			this.lines.push(new Line(points[i], points[i-1]));
 		};
 	}
 
@@ -266,13 +268,13 @@
 		var s = b.to.sub(b.from);
 
 		var rCrossS = r.cross(s);
-		// use this to determine cases
-		var qToPCrossR = q.sub(p).cross(r);
 
 		var d1 = FloatCMP(rCrossS, 0);
-		var d2 = FloatCMP(qToPCrossR, 0);
 
 		if (d1) {
+			// use this to determine the case
+			var qToPCrossR = q.sub(p).cross(r);
+			var d2 = FloatCMP(qToPCrossR, 0);
 			// r x s = 0 && (q-p) x r = 0
 			// two lines are colinear
 			if (d2) {
@@ -299,7 +301,7 @@
 				// then the two intervals intersect iff X < B && A < Y
 				if (X < B && A < Y) {
 					// TODO do better than just returning an arbitrary point here
-					return new Intersection(p.add(r.mul(t0)), 0);
+					return new Intersection(p.add(r.mult(t0)), 0);
 				} else {
 					return null;
 				}
@@ -314,11 +316,12 @@
 		else {
 			// we need to find a t & u (scalars) s.t. p + t * r = q + u * s
 			// t = (q - p) x s / (r x s)
-			var t = q.sub(p).cross(s) / rCrossS;
-			var u = q.sub(p).cross(r) / rCrossS;
+			var qToP = q.sub(p);
+			var t = qToP.cross(s) / rCrossS;
+			var u = qToP.cross(r) / rCrossS;
 			// lines intersect at p + t * r = q + u * s
-			if (t >= 0 && t <= 1 && u >= 0 && u <= 0) {
-				return new Intersection(p.add(r.mul(t)), 0);
+			if (t >= 0 && t <= 1 && u >= 0 && u <= 1) {
+				return new Intersection(p.add(r.mult(t)), 0);
 			}
 			// lines are not parallel, but do not intersect
 			else {
@@ -336,6 +339,7 @@
 					return intersection;
 			};
 		};
+		return null;
 	}
 
 	function FloatCMP(a, b, maxDist) {

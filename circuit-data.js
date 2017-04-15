@@ -474,15 +474,16 @@
 	}
 
 	CircuitData.prototype.export = function() {
-		var data = {};
-		for (var key in this) {
-			data[key] = this[key];
+		// clone object via JSON
+		var data = JSON.parse(JSON.stringify(this));
+		for (var nid in data.graph) {
+			delete data.graph[nid].rect
 		}
-		data.version = latest_file_version;
+		data.version = LATEST_FILE_VERSION;
 		return data;
 	}
 
-	var latest_file_version = "6";
+	var LATEST_FILE_VERSION = "6";
 
 	var converter_map = {
 		"0": version_0_converter,
@@ -584,7 +585,7 @@
 		if (!data.version)
 			data.version = "0";
 
-		while (data.version != latest_file_version) {
+		while (data.version != LATEST_FILE_VERSION) {
 			var converter_func = converter_map[data.version];
 			if (converter_func) {
 				// console.log("Converting file from version "+data.version);
