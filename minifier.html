@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<meta charset="utf-8">
+
+<title>Circuit Simulator</title>
+
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+<meta content="utf-8" http-equiv="encoding">
+
+<style type="text/css">
+.hidden {
+	display: none;
+}
+</style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js" integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8=" crossorigin="anonymous"></script>
+
+<script type="text/javascript">
+	$(document).ready(function () {
+		var target = $("#minifier-target");
+		var result = $("#minifier-result");
+		target.keyup(minify);
+		target.change(minify);
+
+		function minify() {
+		$("#minifier-error").addClass("hidden");
+			try {
+				var targetStr = target.val();
+				$("#minifier-target-wc").text(targetStr.length);
+				var data = JSON.parse(targetStr);
+				delete data.undoStack;
+				for (var nid in data.graph) {
+					delete data.graph[nid].rect;
+				}
+				var resultStr = JSON.stringify(data);
+				$("#minifier-result-wc").text(resultStr.length);
+				var compressRatio = (resultStr.length / targetStr.length) * 100;
+				$("#minifier-compress-ratio").text(compressRatio.toFixed(2));
+				result.val(resultStr);
+			} catch (err) {
+				$("#minifier-error").removeClass("hidden");
+				$("#minifier-error span").text(err);
+			}
+		}
+		});
+</script>
+</head>
+<body>
+<p id="minifier-error" class="hidden">Could not minify data: <span></span></p>
+<p>Paste text here</p>
+<textarea id="minifier-target"></textarea>
+<p>Result</p>
+<textarea id="minifier-result"></textarea>
+<p>Original character count: <span id="minifier-target-wc">0</span></p>
+<p>New character count: <span id="minifier-result-wc">0</span></p>
+<p>Compression ratio: <span id="minifier-compress-ratio">100.00</span>%</p>
+</body>
+</html>
