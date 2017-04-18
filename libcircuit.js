@@ -508,7 +508,7 @@
 			return;
 		} 
 		// if an input pin on a gate
-		else if (node.type != inputType && pid != 1) {
+		else if (node.type != inputType && node.type != wireType && pid != 1) {
 			var logic_func = logic_table[node.type];
 			var newValue;
 			if (node.type == inverterType) {
