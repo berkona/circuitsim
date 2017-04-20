@@ -8,6 +8,6 @@ Ensure that the values of ID_FIELD is correct and SUBMISSION_FIELD_NAME are corr
 Ensure that AUTOGRADE_PARTS is equivalent to the parts in Sakai you want graded
 Run grading script with the following params:
 
-./grading_script <CSV_EXPORTED_FILE> RESPONSE_TMP_DIR ANSWER_DIR
+./grading_script <CSV_EXPORTED_FILE> <RESPONSE_TMP_DIR> <ANSWER_DIR>
 
 Output is similar to lab grading script

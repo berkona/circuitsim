@@ -1,5 +1,4 @@
 (function() {
-
 	"use strict";
 	
 	var root = {};
@@ -276,14 +275,14 @@
 	// test if source is connected directly to ground
 	root.shortCheck = function(circuitData) {
 		var error = null;
+		function isGround(nid, toNID, toPID) {
+			if (circuitData[toNID].type == gndType)
+				error = create_error("Source node "+nid+" is shorted to ground node "+toNID+".", [ nid, toNID ]);
+		}
 		for (var nid in circuitData) {
 			var node = circuitData[nid];
 			if (node.type != vccType) continue;
-			function isGround(toNID, toPID) {
-				if (circuitData[toNID].type == gndType)
-					error = create_error("Source node "+nid+" is shorted to ground node "+toNID+".", [ nid, toNID ]);
-			}
-			circuitTraverser(circuitData, nid, 0, isGround);
+			circuitTraverser(circuitData, nid, 0, isGround.bind(null, nid));
 			if (error) break;
 		}
 		return error;
@@ -292,14 +291,14 @@
 	//test if an input is shorted to another input
 	root.inputShort = function(circuitData) {
 		var error = null;
+		function isShorted(nid, toNID, toPID) {
+			if (circuitData[toNID].type == inputType && nid != toNID)
+				error = create_error("Input node "+nid+" is shorted to input node "+toNID+".", [ nid, toNID ]);
+		}
 		for (var nid in circuitData) {
 			var node = circuitData[nid];
 			if (node.type != inputType) continue;
-			function isShorted(toNID, toPID) {
-				if (circuitData[toNID].type == inputType && nid != toNID)
-					error = create_error("Input node "+nid+" is shorted to input node "+toNID+".", [ nid, toNID ]);
-			}
-			circuitTraverser(circuitData, nid, 0, isShorted);
+			circuitTraverser(circuitData, nid, 0, isShorted.bind(null, nid));
 			if (error) break;
 		}
 		return error;
@@ -308,17 +307,17 @@
 	// test if gate of a transistor is directly connected to gnd or src
 	root.gateShort = function(circuitData) {
 		var error = null;
+		function isShorted(nid, toNID, toPID) {
+			if (circuitData[toNID].type == vccType) {
+				error = create_error("Node "+nid+" has gate pin shorted to source node "+toNID+".", [ nid, toNID ]);
+			} else if (circuitData[toNID].type == gndType) {
+				error = create_error("Node "+nid+" has gate pin shorted to ground node "+toNID+".", [ nid, toNID ]);
+			}
+		}
 		for (var nid in circuitData) {
 			var node = circuitData[nid];
 			if (node.type != nmosType && node.type != pmosType) continue;
-			function isShorted(toNID, toPID) {
-				if (circuitData[toNID].type == vccType) {
-					error = create_error("Node "+nid+" has gate pin shorted to source node "+toNID+".", [ nid, toNID ]);
-				} else if (circuitData[toNID].type == gndType) {
-					error = create_error("Node "+nid+" has gate pin shorted to ground node "+toNID+".", [ nid, toNID ]);
-				}
-			}
-			circuitTraverser(circuitData, nid, 1, isShorted);
+			circuitTraverser(circuitData, nid, 1, isShorted.bind(null, nid));
 			if (error) break;
 		}
 		return error;
@@ -327,15 +326,15 @@
 	// test if input is shorted to an output
 	root.ioShort = function(circuitData) {
 		var error = null;
+		function isShorted(nid, toNID, toPID) {
+			if (circuitData[toNID].type == outputType) {
+				error = create_error("Input "+nid+" is shorted to output "+toNID+".", [ nid, toNID ]);
+			}
+		}
 		for (var nid in circuitData) {
 			var node = circuitData[nid];
 			if (node.type != inputType) continue;
-			function isShorted(toNID, toPID) {
-				if (circuitData[toNID].type == outputType) {
-					error = create_error("Input "+nid+" is shorted to output "+toNID+".", [ nid, toNID ]);
-				}
-			}
-			circuitTraverser(circuitData, nid, 0, isShorted);
+			circuitTraverser(circuitData, nid, 0, isShorted.bind(null, nid));
 			if (error) break;
 		}
 		return error;
