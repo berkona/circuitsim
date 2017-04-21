@@ -1,38 +1,27 @@
 #! /usr/bin/env python2
 
-import sys, os, re, subprocess
+import sys, os, re, subprocess, shutil, csv
 
 ID_FIELD_NAME = 'User Name'
 SUBMISSION_FIELD_NAME = "Order of Submission (1=first)"
-AUTOGRADE_PARTS= [ 1, 2, 5, 6 ]
+# format is a tuple of part and question
+AUTOGRADE_PARTS= [ 
+	(1, 1),
+	(1, 2),
+	(1, 3),
+	(1, 4),
+	(1, 5),
+	(1, 6),
+	(1, 7),
+	(2, 1),
+	(2, 2),
+	(2, 3),
+	(5, 1),
+	(5, 2),
+	(6, 3),
+	(6, 6), 
+]
 
-def parseCSV(string, field_delim=",", quote_delim="'"):
-	"""
-	Quickly written hand parser (i.e., split text into rows) for csv, seems to work for Sakai-based CSVs.
-	Can't use a simple REGEX/split command due to text quoting behavior
-	"""
-
-	fields = []
-	saw_quote = False
-	curr_field = ""
-	for i in xrange(len(string)):
-		char = string[i]
-		if saw_quote:
-			if (char == quote_delim):
-				saw_quote = False
-			else:
-				curr_field += char
-		else:
-			if char == quote_delim:
-				saw_quote = True
-			elif char == field_delim:
-				fields.append(curr_field)
-				curr_field = ""
-			else:
-				curr_field += char
-
-	fields.append(curr_field)
-	return fields
 
 def parseHeader(header):
 	"""
@@ -55,8 +44,8 @@ def parseHeader(header):
 			submission_field = i
 			continue
 
-		for part in AUTOGRADE_PARTS:
-			match = re.match("^(Part "+str(part)+", Question \d), Response$", header[i]) 
+		for part, question in AUTOGRADE_PARTS:
+			match = re.match("^(Part "+str(part)+", Question "+str(question)+"), Response$", header[i]) 
 			if match:
 				answer_fields.append((i, match.group(1)))
 
@@ -68,6 +57,7 @@ def parseHeader(header):
 		raise ValueError("!!! Could not find autograde parts !!! Are you sure you set AUTOGRADE_PARTS correctly?")
 
 	return id_field, submission_field, answer_fields
+
 
 def gradeResponse(studentID, response, questionName, gradingDir, answerDir):
 	if (response == 'No Answer'):
@@ -97,7 +87,7 @@ def gradeResponse(studentID, response, questionName, gradingDir, answerDir):
 		print "Check %s for details" % errorFile
 		with open(errorFile, 'w') as errorFile:
 			errorFile.write(e.output)
-		
+
 
 def main():
 	"""
@@ -113,11 +103,17 @@ def main():
 	gradingDir = sys.argv[2];
 	answerDir = sys.argv[3];
 
+	# delete all files in grading temp  dir
+	if os.path.exists(gradingDir):
+		shutil.rmtree(gradingDir)
+	os.mkdir(gradingDir)
+
+
 	with open(csvFName) as csvFile:
+		reader = csv.reader(csvFile, delimiter=',', quotechar="'")
 		# automagically find all the questions we need to grade
-		id_field, submission_field, answer_fields = parseHeader(parseCSV(csvFile.readline()))
-		for row in csvFile:
-			row = parseCSV(row)
+		id_field, submission_field, answer_fields = parseHeader(reader.next())
+		for row in reader:
 			studentID = row[id_field]
 			print "Grading %s" % studentID
 			if (row[submission_field] == 'No submission'):
@@ -125,5 +121,6 @@ def main():
 				continue
 			for idx, questionName in answer_fields:
 				gradeResponse(studentID, row[idx], questionName, gradingDir, answerDir)
+
 
 main()
