@@ -60,9 +60,25 @@ def parseHeader(header):
 
 
 def gradeResponse(studentID, response, questionName, gradingDir, answerDir):
+	"""
+	Attempt to grade a specific student's response to a question
+	params:
+		-- studentID, string, a unique identifier for a student, generally an onyen
+		-- response, string, the text of the students response as exported by CircuitSim
+		-- questionName, string, human readable string of the question being graded
+		-- gradingDir, path, a directory to write the response to in order to run server-runner.js on, folder will be named after student onyen
+		-- answerDir, path, a directory in which the correct answer resides, expected to be in format FileName(questionName)
+	returns:
+		-- 0 if answer was incorrect for any reason.  Possible reasons: did not respond or simulation result did not match expected answer
+		-- 1 if answer was totally correct, i.e, matched the answer via diff
+	side effects:
+		-- always prints Grading <onyen> for ease of grading
+		-- prints if answer matches expected output: "Output and answer key are identical"
+		-- prints if does not match: "!!! mismatch betweeen output and answer !!!", check errorFile for specific mismatch
+	"""
 	if (response == 'No Answer'):
 		print "!!! %s did not answer %s !!!" % (studentID, questionName)
-		return
+		return 0
 
 	studentDir = os.path.join(gradingDir, studentID)
 	if not os.path.isdir(studentDir):
@@ -81,12 +97,14 @@ def gradeResponse(studentID, response, questionName, gradingDir, answerDir):
 	try:
 		subprocess.check_output(('diff', answerFile, '-'), stdin=grader.stdout, stderr=subprocess.STDOUT)
 		print "Output and answer key are identical"
+		return 1
 	except subprocess.CalledProcessError as e:
 		errorFile = os.path.join(studentDir, 'ERROR.' + responseFName + '.txt')
 		print "!!! Mismatch betweeen output and answer !!!"
 		print "Check %s for details" % errorFile
 		with open(errorFile, 'w') as errorFile:
 			errorFile.write(e.output)
+		return 0
 
 
 def main():
@@ -113,14 +131,35 @@ def main():
 		reader = csv.reader(csvFile, delimiter=',', quotechar="'")
 		# automagically find all the questions we need to grade
 		id_field, submission_field, answer_fields = parseHeader(reader.next())
+		num_autograded = len(answer_fields)
+		num_students = 0.0
+		total_answers = 0.0
+		total_correct = 0.0
+		total_completely_incorrect = 0.0
+		total_partial_correct = 0.0
+		total_no_submission = 0.0
 		for row in reader:
 			studentID = row[id_field]
+			num_students += 1
 			print "Grading %s" % studentID
 			if (row[submission_field] == 'No submission'):
 				print "!!! No submission from %s !!!" % studentID
+				total_no_submission += 1.0
+				# total_completely_incorrect += 1.0
 				continue
+			correct_answers = 0
 			for idx, questionName in answer_fields:
-				gradeResponse(studentID, row[idx], questionName, gradingDir, answerDir)
-
+				correct_answers += gradeResponse(studentID, row[idx], questionName, gradingDir, answerDir)
+			if correct_answers == num_autograded:
+				total_correct += 1.0
+			elif correct_answers == 0:
+				total_completely_incorrect += 1.0
+			else:
+				total_partial_correct += 1.0
+		print "Autograde complete, statistics follow:"
+		print "Percent totally correct: %d%%" % ((total_correct / num_students) * 100)
+		print "Percent completely incorrect: %d%%" % ((total_completely_incorrect / num_students) * 100)
+		print "Percent partially correct: %d%%" % ((total_partial_correct / num_students) * 100)
+		print "Percent no submission: %d%%" % ((total_no_submission / num_students) * 100)
 
 main()
