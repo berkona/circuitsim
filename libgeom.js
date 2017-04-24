@@ -218,8 +218,14 @@
 
 	RegisterIntersectionSupport(CircleRectIntersects, Circle, Rect);
 	function CircleRectIntersects(circle, rect) {
-		// TODO this doesn't handle the case that circle is fully inside rect
-		return CirclePolyLineIntersection(circle, rect.boundingBox);
+		var dx = Math.max(circle.pos.x - rect.topLeft.x, rect.topRight.x - circle.pos.x);
+		var dy = Math.max(circle.pos.y - rect.topLeft.y, rect.bottomLeft.y - circle.pos.y);
+		if (circle.radius * circle.radius >= dx * dx + dy * dy) {
+			// TODO this doesn't handle the case that circle is fully inside rect
+			return PointRectIntersects(circle.pos, rect);
+		} else {
+			return CirclePolyLineIntersection(circle, rect.boundingBox);
+		}
 	}
 
 	RegisterIntersectionSupport(PointRectIntersects, Vector2, Rect);
