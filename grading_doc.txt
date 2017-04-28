@@ -8,6 +8,19 @@ Ensure that the values of ID_FIELD is correct and SUBMISSION_FIELD_NAME are corr
 Ensure that AUTOGRADE_PARTS is equivalent to the parts in Sakai you want graded
 Run grading script with the following params:
 
-./grading_script <CSV_EXPORTED_FILE> <RESPONSE_TMP_DIR> <ANSWER_DIR>
+% ./grading_script <CSV_EXPORTED_FILE> <RESPONSE_TMP_DIR> <ANSWER_DIR> > <COMMENTS_FILE>
 
 Output is similar to lab grading script
+
+I used a directory called HW4 and placed everything under it so my params looked like this:
+
+% ./grading_script.py HW4/Assessment-Problem_Set_4-04242017.csv HW4/responses/ HW4/answers/ > HW4/MASTER_COMMENTS.txt
+
+But yours may vary.
+
+Now wasn't that easy?  Well, sorry to break it to you but now is the hard part.
+Open up Sakai and navigate to tests/quizes -> click menu next to problem set -> scores -> Questions.
+Open each question that needs to be auto-graded and input the correct score based on the rubric for the class.
+This will probably take a while, but I haven't found a faster way to do this.
+
+For your own benefit, the grading script outputs a list of all students for a given question whose answers were 100% correct.  It tends to help to assign 100% points to those student then go back and fill in the rest.

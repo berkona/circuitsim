@@ -6,20 +6,20 @@ ID_FIELD_NAME = 'User Name'
 SUBMISSION_FIELD_NAME = "Order of Submission (1=first)"
 # format is a tuple of part and question
 AUTOGRADE_PARTS= [ 
-	(1, 1),
-	(1, 2),
-	(1, 3),
-	(1, 4),
-	(1, 5),
-	(1, 6),
-	(1, 7),
-	(2, 1),
-	(2, 2),
-	(2, 3),
-	(5, 1),
-	(5, 2),
-	(6, 3),
-	(6, 6), 
+	(1, 1, 3),
+	(1, 2, 3),
+	(1, 3, 4),
+	(1, 4, 5),
+	(1, 5, 5),
+	(1, 6, 5),
+	(1, 7, 5),
+	(2, 1, 6),
+	(2, 2, 8),
+	(2, 3, 6),
+	(5, 1, 5),
+	(5, 2, 5),
+	(6, 3, 4),
+	(6, 6, 4), 
 ]
 
 
@@ -44,10 +44,10 @@ def parseHeader(header):
 			submission_field = i
 			continue
 
-		for part, question in AUTOGRADE_PARTS:
+		for part, question, value in AUTOGRADE_PARTS:
 			match = re.match("^(Part "+str(part)+", Question "+str(question)+"), Response$", header[i]) 
 			if match:
-				answer_fields.append((i, match.group(1)))
+				answer_fields.append((i, (part, question, value), match.group(1)))
 
 	if id_field == -1:
 		raise ValueError("!!!Could not find ID field!!!")
@@ -91,6 +91,7 @@ def gradeResponse(studentID, response, questionName, gradingDir, answerDir):
 		responseFile.write(response)
 
 	answerFile = os.path.join(answerDir, responseFName + '.txt')
+
 	print "Grading %s" % questionName
 	grader = subprocess.Popen(('node', 'server-runner.js', outputFile), stdout=subprocess.PIPE)
 	grader.wait()
@@ -99,13 +100,12 @@ def gradeResponse(studentID, response, questionName, gradingDir, answerDir):
 		print "Output and answer key are identical"
 		return 1
 	except subprocess.CalledProcessError as e:
-		errorFile = os.path.join(studentDir, 'ERROR.' + responseFName + '.txt')
+		errorFileName = os.path.join(studentDir, 'ERROR.' + responseFName + '.txt')
 		print "!!! Mismatch betweeen output and answer !!!"
-		print "Check %s for details" % errorFile
-		with open(errorFile, 'w') as errorFile:
+		print "Check %s for details" % errorFileName
+		with open(errorFileName, 'w') as errorFile:
 			errorFile.write(e.output)
 		return 0
-
 
 def main():
 	"""
@@ -116,16 +116,20 @@ def main():
 		print "USAGE: python csv_converter.py CSV_EXPORT_FILE GRADING_DIR ANSWER_DIR"
 		return
 
-	responses = [];
-	csvFName = sys.argv[1];
-	gradingDir = sys.argv[2];
-	answerDir = sys.argv[3];
+	responses = []
+	csvFName = sys.argv[1]
+	gradingDir = sys.argv[2]
+	answerDir = sys.argv[3]
 
 	# delete all files in grading temp  dir
 	if os.path.exists(gradingDir):
 		shutil.rmtree(gradingDir)
 	os.mkdir(gradingDir)
 
+	correct_students = []
+	incorrect_students = []
+
+	correct_by_parts = {}
 
 	with open(csvFName) as csvFile:
 		reader = csv.reader(csvFile, delimiter=',', quotechar="'")
@@ -145,21 +149,37 @@ def main():
 			if (row[submission_field] == 'No submission'):
 				print "!!! No submission from %s !!!" % studentID
 				total_no_submission += 1.0
-				# total_completely_incorrect += 1.0
 				continue
+
 			correct_answers = 0
-			for idx, questionName in answer_fields:
-				correct_answers += gradeResponse(studentID, row[idx], questionName, gradingDir, answerDir)
+			for idx, questionTuple, questionName in answer_fields:
+				correct = gradeResponse(studentID, row[idx], questionName, gradingDir, answerDir)
+				correct_answers += correct
+
+				if questionName not in correct_by_parts:
+					correct_by_parts[questionName] = []
+
+				if correct:
+					correct_by_parts[questionName].append(studentID)
+
 			if correct_answers == num_autograded:
 				total_correct += 1.0
+				correct_students.append(studentID)
 			elif correct_answers == 0:
 				total_completely_incorrect += 1.0
+				incorrect_students.append(studentID)
 			else:
 				total_partial_correct += 1.0
+				incorrect_students.append(studentID)
+
 		print "Autograde complete, statistics follow:"
-		print "Percent totally correct: %d%%" % ((total_correct / num_students) * 100)
-		print "Percent completely incorrect: %d%%" % ((total_completely_incorrect / num_students) * 100)
-		print "Percent partially correct: %d%%" % ((total_partial_correct / num_students) * 100)
-		print "Percent no submission: %d%%" % ((total_no_submission / num_students) * 100)
+		print "Percent totally correct: %d%%" % ((total_correct / num_students) * 100.0)
+		print "Percent completely incorrect: %d%%" % ((total_completely_incorrect / num_students) * 100.0)
+		print "Percent partially correct: %d%%" % ((total_partial_correct / num_students) * 100.0)
+		print "Percent no submission: %d%%" % ((total_no_submission / num_students) * 100.0)
+
+	print 'Correct students by question:'
+	for questionName, students in sorted(correct_by_parts.items()):
+		print questionName + ' ' + ', '.join(students) + '\n'
 
 main()

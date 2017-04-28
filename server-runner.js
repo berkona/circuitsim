@@ -98,13 +98,13 @@ function runSimulation(fname) {
 	if (circuitData.simType == CircuitData.SIM_TYPE_TRANSISTOR) {
 		var verifiedResult = LibCircuit.runAllChecks(circuitData.graph);
 		if (verifiedResult) {
-			throw new Error("Circuit was not able to be verified: " + verifiedResult[0] + " returned error " +verifiedResult[1]);
+			throw new Error("Circuit was not able to be verified: " + verifiedResult.message);
 		}
 		result = LibCircuit.simulate(circuitData.graph);
 	} else if (circuitData.simType == CircuitData.SIM_TYPE_GATE) {
 		var verifiedResult = LibCircuit.runGateChecks(circuitData.graph);
 		if (verifiedResult) {
-			throw new Error("Circuit was not able to be verified: " + verifiedResult[0] + " returned error " +verifiedResult[1]);
+			throw new Error("Circuit was not able to be verified: " + verifiedResult.message);
 		}
 		result = LibCircuit.simulateGates(circuitData.graph);
 	} else {
