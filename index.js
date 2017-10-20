@@ -530,7 +530,9 @@
 		// console.log("Exported data to object");
 		// console.log(data);
 		var serialized = JSON.stringify(data);
-		$("#export-panel").modal("show");
+    var compressed = LZString.compressToEncodedURIComponent(serialized);
+    console.log("Finished compressing export data, compression ratio: " + (serialized.length/compressed.length));
+    $("#export-panel").modal("show");
 		$("#export-panel textarea").text(serialized);
 	}
 
@@ -564,18 +566,20 @@
 	expose(import_action, 'import_action');
 	function import_action() {
 		try {
+			// auto-detect compressed vs uncompressed data
 			var serialized = $("#import-panel textarea").val();
+      
+      var data;
+      try {
+				data = JSON.parse(serialized);
+			} catch (e) {
+				serialized = LZString.decompressFromEncodedURIComponent(serialized);
+				// if it fails here, user hasn't given us valid data
+				data = JSON.parse(serialized);
+			}
 			
 			$("#import-panel textarea").val("");
 			$("#import-panel").modal("hide");
-
-			// console.log("Serialized data received:");
-			// console.log(serialized);
-			
-			var data = JSON.parse(serialized);
-			
-			// console.log("Import data from text");
-			// console.log(data);
 			
 			circuitData.clear();
 			circuitData.import(data, getBoundingBox);
