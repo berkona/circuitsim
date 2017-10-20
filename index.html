@@ -259,7 +259,15 @@
 
 </div>
 
-<div id="io-template" class="io-form col-md-12 hidden"><span class="io-label"></span> <!-- <span class="glyphicon glyphicon-remove"></span> --></div>
+<div id="io-template" class="io-form col-md-12 hidden unselectable">
+	<div class="col-md-10">
+		<span class="io-label"></span>
+		<img src="images/io_pin.png" alt="IO Pin" class="drag-panel" draggable="true"></img>
+	</div>
+</div>
+
+<img id="input" src="images/io_pin.png" class="hidden" alt="Input Pin"></img>
+<img id="output" src="images/io_pin.png" class="hidden" alt="Output Pin"></img>
 
 <form id="io-add-template" class="io-form col-md-12 form-inline hidden">
 	<div class="form-group col-md-9">
@@ -373,7 +381,7 @@
 
 
 <!-- delete confirm -->
-<div class="modal fade" id="delete-confirm-panel" tabindex="-1" role="dialog" aria-labelledby="deleteConfirmTitle">
+<div class="modal fade" id="delete-confirm-panel" tabindex="-1" role="dialog" aria-labelledby="deleteConfirmTitle" data-backdrop="false" data-keyboard="false">
   <div class="modal-dialog" role="document">
     <div class="modal-content">
       <div class="modal-header">
@@ -504,14 +512,16 @@
       </div>
       <div class="modal-body">
       	<div class="row">
-			<table class="table table-bordered table-hover">
-				<thead>
-					<tr>
-					</tr>
-				</thead>
-				<tbody>
-				</tbody>
-			</table>
+      		<div class="col-md-12">
+				<table class="table table-bordered table-hover">
+					<thead>
+						<tr>
+						</tr>
+					</thead>
+					<tbody>
+					</tbody>
+				</table>
+			</div>
       	</div>
       </div>
     </div>

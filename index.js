@@ -19,6 +19,19 @@
 	// one of: "place", "remove", "move"
 	var toolMode = "place";
 
+	var inputType = {
+		text_pos: [2, 22 ],
+		pins: [ [23, 11] ],
+	};
+
+	var outputType = {
+		text_pos: [12, 22 ],
+		pins: [ [0, 11] ],
+	};
+
+	transistor_types[LibCircuit.inputType] = inputType;
+	transistor_types[LibCircuit.outputType] = outputType;
+
 	transistor_types[LibCircuit.pmosType] = {
 		text_pos: [5, 12],
 		pins: [
@@ -52,6 +65,9 @@
 	}
 
 	var gate_types = {};
+
+	gate_types[LibCircuit.inputType] = inputType;
+	gate_types[LibCircuit.outputType] = outputType;
 
 	gate_types[LibCircuit.andType] = {
 		text_pos: [25, 17],
@@ -228,7 +244,7 @@
 		for (var id in transistor_types) {
 			// var typedef = transistor_types[id];
 			var ele = $('#'+id);
-			ele.on('dragstart', drag_handler);
+			ele.on('dragstart', drag_handler.bind(null, id));
 			// tp.append(ele);
 		};
 	}
@@ -239,7 +255,7 @@
 		for (var id in gate_types) {
 			// var typedef = gate_types[id];
 			var ele = $('#'+id);
-			ele.on('dragstart', drag_handler);
+			ele.on('dragstart', drag_handler.bind(null, id));
 			// tp.append(ele);
 		}
 	}
@@ -264,13 +280,15 @@
 		$("#transistor-panel-g").removeClass("hidden");
 	}
 
-	function add_pin_names(arr, addEventHandler) {
+	function add_pin_names(arr, addEventHandler, type) {
 		var ip = $("#io-panel");
 		ip.empty();
 		for (var i = 0; i < arr.length; i++) {
 			var ioTemplate = $('#io-template').clone();
 			ioTemplate.removeClass("hidden");
 			ioTemplate.find(".io-label").text(arr[i]);
+			ioTemplate.on('dragstart', drag_handler.bind(arr[i], type));
+			ioTemplate.attr("id", arr[i] + "pin");
 			ip.append(ioTemplate)
 		};
 
@@ -292,7 +310,7 @@
 		$("#io-panel-tabs li").removeClass("active");
 		$("#io-panel-i-tab").addClass("active");
 
-		add_pin_names(circuitData.getInputNames(), add_input_action);
+		add_pin_names(circuitData.getInputNames(), add_input_action, LibCircuit.inputType);
 	}
 
 	expose(show_output_panel, 'show_output_panel');
@@ -302,15 +320,15 @@
 		$("#io-panel-tabs li").removeClass("active");
 		$("#io-panel-o-tab").addClass("active");
 
-		add_pin_names(circuitData.getOutputNames(), add_output_action);
+		add_pin_names(circuitData.getOutputNames(), add_output_action, LibCircuit.outputType);
 	}
 
 	function add_input_action() {
 		var name = $("#addIOPin").val();
 
-		circuitData.addIO(name, true);
-		circuitDrawer.renderIO();
-		circuitDrawer.renderEdges();
+		circuitData.addIOName(name, true);
+		//circuitDrawer.renderIO();
+		//circuitDrawer.renderEdges();
 
 		show_input_panel();
 	}
@@ -318,9 +336,9 @@
 	function add_output_action() {
 		var name = $('#addIOPin').val();
 
-		circuitData.addIO(name, false);
-		circuitDrawer.renderIO();
-		circuitDrawer.renderEdges();
+		circuitData.addIOName(name, false);
+		// circuitDrawer.renderIO();
+		// circuitDrawer.renderEdges();
 
 		show_output_panel();
 	}
@@ -440,10 +458,9 @@
 		var headerEle = $("#simulate-panel thead tr");
 		headerEle.empty();
 
-		function AddHeader(nid) {
-			var node = circuitData.getNode(nid);
+		function AddHeader(inputName) {
 			var ele = $(template)
-			ele.text(node.name);
+			ele.text(inputName);
 			headerEle.append(ele);
 		}
 
@@ -476,7 +493,7 @@
 		if (!circuitData.canUndo()) return;
 		var result = circuitData.undo();
 		var type = result[0];
-		if (type == 'node') {
+		if (type == 'node' || type == 'io') {
 			circuitDrawer.deleteNode(result[1]);
 			circuitDrawer.renderEdges();
 		} else if (type == 'move') {
@@ -484,10 +501,6 @@
 			circuitDrawer.renderAll(getImageMap());
 		} else if (type == 'edge') {
 			circuitDrawer.renderEdges();
-		} else if (type == 'io') {
-			circuitDrawer.renderIO();
-			circuitDrawer.renderEdges();
-			io_changed();
 		} else {
 			console.warn("Got unknown undo type back from circuitData");
 		}
@@ -556,13 +569,13 @@
 			$("#import-panel textarea").val("");
 			$("#import-panel").modal("hide");
 
-			console.log("Serialized data received:");
-			console.log(serialized);
+			// console.log("Serialized data received:");
+			// console.log(serialized);
 			
 			var data = JSON.parse(serialized);
 			
-			console.log("Import data from text");
-			console.log(data);
+			// console.log("Import data from text");
+			// console.log(data);
 			
 			circuitData.clear();
 			circuitData.import(data, getBoundingBox);
@@ -581,8 +594,10 @@
 			io_changed();
 			$("#import-success-panel").modal("show");
 		} catch (e) {
+			console.error("Could not import file!");
+			console.error(e);
 			$("#import-error-panel").modal("show");
-			$("#import-error-panel .error-message").text(e);
+			$("#import-error-panel #error-message").text(e);
 		}
 	}
 
@@ -631,10 +646,16 @@
 	}
 
 	var mouse_offset = null;
+	var drag_img = null;
 
-	function drag_handler(evt) {
-		mouse_offset = mouse_to_element("#"+evt.target.id, evt);
-		evt.originalEvent.dataTransfer.setData("id", evt.target.id);
+	function drag_handler(type, evt) {
+		mouse_offset = mouse_to_element(evt.target, evt);
+		drag_img = document.getElementById(type);
+
+		evt.originalEvent.dataTransfer.setData("type", type);
+		if (type == LibCircuit.inputType || type == LibCircuit.outputType) {
+			evt.originalEvent.dataTransfer.setData("ioName", this);
+		}
 	}
 
 	function dragover_handler (evt) {
@@ -691,9 +712,11 @@
 	function drop_handler (evt) {
 		evt.preventDefault();
 
+		var typeId = evt.originalEvent.dataTransfer.getData("type");
+		//var mouse_offset = evt.originalEvent.dataTransfer.getData("mouse_offset");
+
 		var pos = window_to_canvas(nodeLayer, evt.clientX, evt.clientY);
-		var typeId = evt.originalEvent.dataTransfer.getData("id");
-		var img = document.getElementById(typeId);
+		var img = drag_img;
 
 		var type;
 		if (circuitData.simType == "transistor") {
@@ -705,7 +728,7 @@
 		}
 
 		// conform pos to offset when started dragging
-		pos.x = pos.x - mouse_offset.x + img.width/2; // add half width b/c centers image on mouse
+		pos.x = pos.x - mouse_offset.x; // add half width b/c centers image on mouse
 		pos.y = pos.y - mouse_offset.y;
 
 		pos = snap_to_canvas(pos, img.naturalWidth, img.naturalHeight);
@@ -718,7 +741,14 @@
 			return;
 		}
 
-		var nid = circuitData.addNode(typeId, type, pos, rect);
+		// input drop handling
+		var nid;
+		if (typeId == LibCircuit.inputType || typeId == LibCircuit.outputType) {
+			var ioName = evt.originalEvent.dataTransfer.getData("ioName");
+			nid = circuitData.addIO(ioName, pos, rect, typeId == LibCircuit.inputType);
+		} else {
+			nid = circuitData.addNode(typeId, type, pos, rect);
+		}
 		circuitDrawer.renderNode(circuitData.getNode(nid), img, true);
 	}
 

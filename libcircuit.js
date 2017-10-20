@@ -594,44 +594,86 @@
 	}
 
 	function runSimulation(circuitData, simFunc) {
-		var inputNIDList = Object.keys(circuitData).filter(function (x) {
-			return circuitData[x].type == inputType;
-		});
+		// get all input names
+		var inputNamesToNIDS = {};
+		var outputNamesToNIDS = {};
+		for (var nid in circuitData) {
+			var node = circuitData[nid];
+			if (node.type == inputType) {
+				if (!inputNamesToNIDS[node.name])
+					inputNamesToNIDS[node.name] = [];
+				inputNamesToNIDS[node.name].push(nid);
+			} else if (node.type == outputType) {
+				if (!outputNamesToNIDS[node.name])
+					outputNamesToNIDS[node.name] = [];
+				outputNamesToNIDS[node.name].push(nid);
+			}
+		}
 
-		var outputNIDList = Object.keys(circuitData).filter(function (x) {
-			return circuitData[x].type == outputType;
-		});
+		var inputNames = Object.keys(inputNamesToNIDS);
+		var outputNames = Object.keys(outputNamesToNIDS);
 
-		var nRows = Math.pow(2, inputNIDList.length);
+		var nRows = Math.pow(2, inputNames.length);
 		var ttRows = [];
 		for (i = 0; i < nRows; i++) {
 			var binary = i.toString(2).split('');
 			// pad string with zeros
-			while (binary.length < inputNIDList.length) {
+			while (binary.length < inputNames.length) {
 				binary.unshift('0');
 			}
 			ttRows.push(binary);
 		}
 
 		var result = {
-			inputs: inputNIDList,
-			outputs: outputNIDList,
+			inputs: inputNames,
+			outputs: outputNames,
 			rows: [],
 		}
 		for (var i = ttRows.length - 1; i >= 0; i--) {
 			var inputs = ttRows[i];
 			var inputMap = {};
-			for (var j = inputNIDList.length - 1; j >= 0; j--) {
-				inputMap[inputNIDList[j]] = inputs[j];
+			
+			for (var j = inputNames.length - 1; j >= 0; j--) {
+				var name = inputNames[j];
+				// lookup all nids for given inputName and put the same input on them
+				for (var k = inputNamesToNIDS[name].length - 1; k >= 0; k--) {
+					inputMap[inputNamesToNIDS[name][k]] = inputs[j];
+				};
 			};
-			var outputMap = simFunc(circuitData, inputMap);
+			var outputMapByNID = simFunc(circuitData, inputMap);
+
+			// remap outputMap from by NID to by Name, checking for X and Z conditions on a per-name basis
+			var outputMap = {};
+			for (var name in outputNamesToNIDS) {
+				var nids = outputNamesToNIDS[name];
+				for (var j = nids.length - 1; j >= 0; j--) {
+					var nid = nids[j];
+					var currentValue = outputMapByNID[nid];
+					var previousValue = outputMap[name];
+					// first loop through this outputName
+					if (!previousValue) {
+						outputMap[name] = currentValue;
+					} 
+					// if last loop found a Z, set to currentValue (which may also be a Z)
+					else if (previousValue == 'Z') {
+						outputMap[name] = currentValue;
+					}
+					// here output pin is at least not floating, check if driven to different values
+					// note any X's previous generated will continue to collapse into X's
+					else if (currentValue != 'Z' && previousValue != currentValue) {
+						outputMap[name] = 'X';
+					}
+					// else: previousValue == currentVaue, so just keep looping
+				};
+			}
+
 			// order is important for these loops
 			var row = [];
-			for (var j = 0; j < inputNIDList.length; j++) {
+			for (var j = 0; j < inputNames.length; j++) {
 				row.push(inputs[j]);
 			};
-			for (var j = 0; j < outputNIDList.length; j++) {
-				row.push(outputMap[outputNIDList[j]]);
+			for (var j = 0; j < outputNames.length; j++) {
+				row.push(outputMap[outputNames[j]]);
 			};
 			result.rows.push(row);
 		}
