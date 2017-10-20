@@ -542,7 +542,7 @@
 		var rect = circuitData.getNode(deletionNID).rect;
 		circuitData.deleteNode(deletionNID);
 		circuitDrawer.deleteNode(rect);
-		circuitDrawer.renderIO();
+		//circuitDrawer.renderIO();
 		circuitDrawer.renderEdges();
 	}
 
