@@ -16,7 +16,21 @@
 	// can't use a literal b/c we want to use type names from LibCircuit
 	var transistor_types = {}
 
-	var deleteMode = false;
+	// one of: "place", "remove", "move"
+	var toolMode = "place";
+
+	var inputType = {
+		text_pos: [2, 22 ],
+		pins: [ [23, 11] ],
+	};
+
+	var outputType = {
+		text_pos: [12, 22 ],
+		pins: [ [0, 11] ],
+	};
+
+	transistor_types[LibCircuit.inputType] = inputType;
+	transistor_types[LibCircuit.outputType] = outputType;
 
 	transistor_types[LibCircuit.pmosType] = {
 		text_pos: [5, 12],
@@ -37,20 +51,23 @@
 	}
 
 	transistor_types[LibCircuit.vccType] = {
-		text_pos: [5, 26],
+		text_pos: [0, 25],
 		pins: [
-			[40, 17],
+			[20, 31],
 		]
 	}
 
 	transistor_types[LibCircuit.gndType] = {
-		text_pos: [5, 26],
+		text_pos: [0, 30],
 		pins: [
-			[40, 17],
+			[20, 0],
 		]
 	}
 
 	var gate_types = {};
+
+	gate_types[LibCircuit.inputType] = inputType;
+	gate_types[LibCircuit.outputType] = outputType;
 
 	gate_types[LibCircuit.andType] = {
 		text_pos: [25, 17],
@@ -227,7 +244,7 @@
 		for (var id in transistor_types) {
 			// var typedef = transistor_types[id];
 			var ele = $('#'+id);
-			ele.on('dragstart', drag_handler);
+			ele.on('dragstart', drag_handler.bind(null, id));
 			// tp.append(ele);
 		};
 	}
@@ -238,7 +255,7 @@
 		for (var id in gate_types) {
 			// var typedef = gate_types[id];
 			var ele = $('#'+id);
-			ele.on('dragstart', drag_handler);
+			ele.on('dragstart', drag_handler.bind(null, id));
 			// tp.append(ele);
 		}
 	}
@@ -263,13 +280,15 @@
 		$("#transistor-panel-g").removeClass("hidden");
 	}
 
-	function add_pin_names(arr, addEventHandler) {
+	function add_pin_names(arr, addEventHandler, type) {
 		var ip = $("#io-panel");
 		ip.empty();
 		for (var i = 0; i < arr.length; i++) {
 			var ioTemplate = $('#io-template').clone();
 			ioTemplate.removeClass("hidden");
 			ioTemplate.find(".io-label").text(arr[i]);
+			ioTemplate.on('dragstart', drag_handler.bind(arr[i], type));
+			ioTemplate.attr("id", arr[i] + "pin");
 			ip.append(ioTemplate)
 		};
 
@@ -291,7 +310,7 @@
 		$("#io-panel-tabs li").removeClass("active");
 		$("#io-panel-i-tab").addClass("active");
 
-		add_pin_names(circuitData.getInputNames(), add_input_action);
+		add_pin_names(circuitData.getInputNames(), add_input_action, LibCircuit.inputType);
 	}
 
 	expose(show_output_panel, 'show_output_panel');
@@ -301,15 +320,15 @@
 		$("#io-panel-tabs li").removeClass("active");
 		$("#io-panel-o-tab").addClass("active");
 
-		add_pin_names(circuitData.getOutputNames(), add_output_action);
+		add_pin_names(circuitData.getOutputNames(), add_output_action, LibCircuit.outputType);
 	}
 
 	function add_input_action() {
 		var name = $("#addIOPin").val();
 
-		circuitData.addIO(name, true);
-		circuitDrawer.renderIO();
-		circuitDrawer.renderEdges();
+		circuitData.addIOName(name, true);
+		//circuitDrawer.renderIO();
+		//circuitDrawer.renderEdges();
 
 		show_input_panel();
 	}
@@ -317,16 +336,16 @@
 	function add_output_action() {
 		var name = $('#addIOPin').val();
 
-		circuitData.addIO(name, false);
-		circuitDrawer.renderIO();
-		circuitDrawer.renderEdges();
+		circuitData.addIOName(name, false);
+		// circuitDrawer.renderIO();
+		// circuitDrawer.renderEdges();
 
 		show_output_panel();
 	}
 
 	function show_verify_error(error) {
 		$("#error-message").text(error.message);
-		$("#error-panel").removeClass("hidden");
+		$("#error-panel").modal("show");
 
 		for (var i = error.nids.length - 1; i >= 0; i--) {
 			var nid = error.nids[i];
@@ -343,6 +362,16 @@
 		// kludge for removing error boxes
 		circuitDrawer.clear();
 		circuitDrawer.renderAll(getImageMap());
+	}
+
+	expose(start_change_mode_action, "start_change_mode_action");
+	function start_change_mode_action(mode) {
+		// suppress clicks on current mode button
+		if (!mode || mode == circuitData.simType) {
+			console.log("DEBUG: suppress request to change simType to: " + mode + ", current simType: " + circuitData.simType);
+			return;
+		}
+		$("#change-mode-panel").modal("show");
 	}
 
 	expose(confirm_change_mode_action, "confirm_change_mode_action");
@@ -363,13 +392,21 @@
 		circuitData.simType = sim_type;
 		io_changed();
 
-		hide_panel("#change-mode-panel");
+		$("#change-mode-panel").modal("hide");
+		
+		// update button group status
+		$("#modeSelectGroup button").removeClass("active");
+		if (sim_type == CircuitData.SIM_TYPE_TRANSISTOR) {
+			$("#modeSelectTransistor").addClass("active");
+		} else {
+			$("#modeSelectGate").addClass("active");
+		}
 	}
 
 	expose(verify_action, 'verify_action');
 	function verify_action() {
-		$("#error-panel").addClass("hidden");
-		$("#success-panel").addClass("hidden");
+		//$("#error-panel").modal("hide");
+		//$("#success-panel").modal("hide");
 
 		error_box_kludge()
 
@@ -383,14 +420,14 @@
 		if (result) {
 			show_verify_error(result);
 		} else {
-			$("#success-panel").removeClass("hidden");
+			$("#success-panel").modal("show");
 		}
 	}
 
 	expose(simulate_action, 'simulate_action');
 	function simulate_action() {
-		$("#error-panel").addClass("hidden");
-		$("#success-panel").addClass("hidden");
+		//$("#error-panel").addClass("hidden");
+		//$("#success-panel").addClass("hidden");
 
 		error_box_kludge();
 
@@ -416,15 +453,14 @@
 		console.log(result);
 
 		var template = "<td></td>";
-		$("#simulate-panel").removeClass("hidden");
+		$("#simulate-panel").modal("show");
 
 		var headerEle = $("#simulate-panel thead tr");
 		headerEle.empty();
 
-		function AddHeader(nid) {
-			var node = circuitData.getNode(nid);
+		function AddHeader(inputName) {
 			var ele = $(template)
-			ele.text(node.name);
+			ele.text(inputName);
 			headerEle.append(ele);
 		}
 
@@ -457,14 +493,14 @@
 		if (!circuitData.canUndo()) return;
 		var result = circuitData.undo();
 		var type = result[0];
-		if (type == 'node') {
+		if (type == 'node' || type == 'io') {
 			circuitDrawer.deleteNode(result[1]);
+			circuitDrawer.renderEdges();
+		} else if (type == 'move') {
+			circuitDrawer.clear();
+			circuitDrawer.renderAll(getImageMap());
 		} else if (type == 'edge') {
 			circuitDrawer.renderEdges();
-		} else if (type == 'io') {
-			circuitDrawer.renderIO();
-			circuitDrawer.renderEdges();
-			io_changed();
 		} else {
 			console.warn("Got unknown undo type back from circuitData");
 		}
@@ -485,7 +521,7 @@
 		circuitData.clear();
 		circuitDrawer.clear();
 		io_changed();
-		hide_panel("#clear-panel");
+		$("#clear-panel").modal("hide");
 	}
 
 	expose(export_action, 'export_action');
@@ -494,15 +530,15 @@
 		// console.log("Exported data to object");
 		// console.log(data);
 		var serialized = JSON.stringify(data);
-		var compressed = LZString.compressToEncodedURIComponent(serialized);
-		console.log("Finished compressing export data, compression ratio: " + (serialized.length/compressed.length));
-		$("#export-panel").removeClass("hidden");
-		$("#export-panel textarea").text(compressed);
+    var compressed = LZString.compressToEncodedURIComponent(serialized);
+    console.log("Finished compressing export data, compression ratio: " + (serialized.length/compressed.length));
+    $("#export-panel").modal("show");
+		$("#export-panel textarea").text(serialized);
 	}
 
 	expose(confirm_delete_action, 'confirm_delete_action');
 	function confirm_delete_action() {
-		$("#delete-confirm-panel").addClass("hidden");
+		$("#delete-confirm-panel").modal("hide");
 		var rect = circuitData.getNode(deletionNID).rect;
 		circuitData.deleteNode(deletionNID);
 		circuitDrawer.deleteNode(rect);
@@ -510,12 +546,12 @@
 		circuitDrawer.renderEdges();
 	}
 
-	expose(show_panel, 'show_panel');
-	function show_panel(selector) {
-		// console.log("Showing panel: "+selector);
-		// console.log($(selector));
-		$(selector).removeClass("hidden");
-	}
+	// expose(show_panel, 'show_panel');
+	// function show_panel(selector) {
+	// 	// console.log("Showing panel: "+selector);
+	// 	// console.log($(selector));
+	// 	$(selector).removeClass("hidden");
+	// }
 
 	function getImageMap() {
 		var imageMap = {};
@@ -530,16 +566,20 @@
 	expose(import_action, 'import_action');
 	function import_action() {
 		try {
-			var data;
 			// auto-detect compressed vs uncompressed data
 			var serialized = $("#import-panel textarea").val();
-			try {
+      
+      var data;
+      try {
 				data = JSON.parse(serialized);
 			} catch (e) {
 				serialized = LZString.decompressFromEncodedURIComponent(serialized);
 				// if it fails here, user hasn't given us valid data
 				data = JSON.parse(serialized);
 			}
+			
+			$("#import-panel textarea").val("");
+			$("#import-panel").modal("hide");
 			
 			circuitData.clear();
 			circuitData.import(data, getBoundingBox);
@@ -556,13 +596,13 @@
 			circuitDrawer.renderAll(getImageMap());
 			
 			io_changed();
-			$("#import-success-panel").removeClass("hidden");
+			$("#import-success-panel").modal("show");
 		} catch (e) {
-			$("#import-error-panel").removeClass("hidden");
-			$("#import-error-panel .error-message").text(e);
+			console.error("Could not import file!");
+			console.error(e);
+			$("#import-error-panel").modal("show");
+			$("#import-error-panel #error-message").text(e);
 		}
-		$("#import-panel textarea").val("");
-		$("#import-panel").addClass("hidden");
 	}
 
 	function render_complete_grid() {
@@ -610,10 +650,16 @@
 	}
 
 	var mouse_offset = null;
+	var drag_img = null;
 
-	function drag_handler(evt) {
-		mouse_offset = mouse_to_element("#"+evt.target.id, evt);
-		evt.originalEvent.dataTransfer.setData("id", evt.target.id);
+	function drag_handler(type, evt) {
+		mouse_offset = mouse_to_element(evt.target, evt);
+		drag_img = document.getElementById(type);
+
+		evt.originalEvent.dataTransfer.setData("type", type);
+		if (type == LibCircuit.inputType || type == LibCircuit.outputType) {
+			evt.originalEvent.dataTransfer.setData("ioName", this);
+		}
 	}
 
 	function dragover_handler (evt) {
@@ -670,9 +716,11 @@
 	function drop_handler (evt) {
 		evt.preventDefault();
 
+		var typeId = evt.originalEvent.dataTransfer.getData("type");
+		//var mouse_offset = evt.originalEvent.dataTransfer.getData("mouse_offset");
+
 		var pos = window_to_canvas(nodeLayer, evt.clientX, evt.clientY);
-		var typeId = evt.originalEvent.dataTransfer.getData("id");
-		var img = document.getElementById(typeId);
+		var img = drag_img;
 
 		var type;
 		if (circuitData.simType == "transistor") {
@@ -684,7 +732,7 @@
 		}
 
 		// conform pos to offset when started dragging
-		pos.x = pos.x - mouse_offset.x + img.width/2; // add half width b/c centers image on mouse
+		pos.x = pos.x - mouse_offset.x; // add half width b/c centers image on mouse
 		pos.y = pos.y - mouse_offset.y;
 
 		pos = snap_to_canvas(pos, img.naturalWidth, img.naturalHeight);
@@ -697,7 +745,14 @@
 			return;
 		}
 
-		var nid = circuitData.addNode(typeId, type, pos, rect);
+		// input drop handling
+		var nid;
+		if (typeId == LibCircuit.inputType || typeId == LibCircuit.outputType) {
+			var ioName = evt.originalEvent.dataTransfer.getData("ioName");
+			nid = circuitData.addIO(ioName, pos, rect, typeId == LibCircuit.inputType);
+		} else {
+			nid = circuitData.addNode(typeId, type, pos, rect);
+		}
 		circuitDrawer.renderNode(circuitData.getNode(nid), img, true);
 	}
 
@@ -705,31 +760,45 @@
 	var clickBox = 10;
 
 	var deletionNID = null;
-	var destinationDeletionNode = null;
+	// var destinationDeletionNode = null;
 
-	function handle_delete(pos) {
-		deletionNID = circuitData.closestNode(pos, clickBox);
-		if (!deletionNID) {
-			console.warn("Could not find closest node");
-		} else {
-			var node = circuitData.getNode(deletionNID);
-			var typeId = node.type
-			var img = document.getElementById(typeId);
-			circuitDrawer.updateNode(node, img, typeId != LibCircuit.wireType, true);
-			show_panel('#delete-confirm-panel');
-		}
+	var moveNID = null;
+
+	function draw_bbox(nid) {
+		var node = circuitData.getNode(nid);
+		var typeId = node.type
+		var img = document.getElementById(typeId);
+		circuitDrawer.updateNode(node, img, typeId != LibCircuit.wireType, true);
 	}
 
-	expose(enable_delete_mode_action, 'enable_delete_mode_action');
-	function enable_delete_mode_action() {
-		deleteMode = true;
-		show_panel("#delete-panel");
+	expose(change_mode_remove, 'change_mode_remove');
+	function change_mode_remove() {
+		toolMode = "remove";
+		deletionNID = null;
+		$("#toolSelectGroup button").removeClass("active");
+		$("#toolSelectRemove").addClass("active");
+		$(".mode-panel").addClass("hidden");
+		$("#deleteModePanel").removeClass("hidden");
 	}
 
-	expose(disable_delete_mode_action, 'disable_delete_mode_action');
-	function disable_delete_mode_action() {
-		deleteMode = false;
-		hide_panel("#delete-panel");
+	expose(change_mode_place, 'change_mode_place');
+	function change_mode_place() {
+		toolMode = "place";
+		lastClickedNode = null;
+		$("#toolSelectGroup button").removeClass("active");
+		$("#toolSelectAdd").addClass("active");
+		$(".mode-panel").addClass("hidden");
+		$("#addModePanel").removeClass("hidden");
+	}
+
+	expose(change_mode_move, 'change_mode_move');
+	function change_mode_move() {
+		toolMode = "move";
+		moveNID = null;
+		$("#toolSelectGroup button").removeClass("active");
+		$("#toolSelectMove").addClass("active");
+		$(".mode-panel").addClass("hidden");
+		$("#moveModePanel").removeClass("hidden");
 	}
 
 	expose(cancel_delete_action, 'cancel_delete_action');
@@ -738,7 +807,39 @@
 		var typeId = node.type
 		var img = document.getElementById(typeId);
 		circuitDrawer.updateNode(node, img, typeId != LibCircuit.wireType, false);
-		hide_panel('#delete-confirm-panel');
+		$('#delete-confirm-panel').modal('hide');
+	}
+
+	function handle_delete(pos) {
+		deletionNID = circuitData.closestNode(pos, clickBox);
+		if (!deletionNID) {
+			console.warn("Could not find closest node");
+		} else {
+			draw_bbox(deletionNID);
+			$('#delete-confirm-panel').modal('show');
+		}
+	}
+
+	function handle_move(pos) {
+		if (moveNID) {
+			var rect = getBoundingBox(circuitData.getNode(moveNID).type, pos);
+			
+			// prevent rendering over another symbol
+			if (circuitData.rectIntersects(rect)) {
+				console.log("Ignoring drop onto another symbol");
+				return;
+			}
+
+			circuitData.moveNode(moveNID, pos, rect);
+			
+			circuitDrawer.clear();
+			circuitDrawer.renderAll(getImageMap());
+
+			moveNID = null;
+		} else {
+			moveNID = circuitData.closestNode(pos, clickBox);
+			draw_bbox(moveNID);
+		}
 	}
 
 	function handle_pin_connect(pos) {
@@ -795,12 +896,16 @@
 
 		var pos = window_to_canvas(edgeLayer, evt.clientX, evt.clientY);
 
-		// console.log("User clicked at: "+pos.x+", "+pos.y);
+		console.log("DEBUG: User clicked at: "+pos.x+", "+pos.y + " toolMode: " + toolMode);
 
-		if (deleteMode) {
+		if (toolMode == "remove") {
 			handle_delete(pos);
-		} else {
+		} else if (toolMode == "place") {
 			handle_pin_connect(pos);
+		} else if (toolMode == "move") {
+			handle_move(pos);
+		} else {
+			console.warn("Unknown tool mode: " + toolMode);
 		}
 	}
 

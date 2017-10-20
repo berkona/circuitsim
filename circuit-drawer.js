@@ -35,11 +35,9 @@
 	// CircuitDrawer.DIR_DOWN = 3;
 
 	CircuitDrawer.prototype.renderAll = function(types) {
-		this.renderIO();
+		//this.renderIO();
 		for (var nid in this.circuitData.graph) {
 			var node = this.circuitData.graph[nid];
-			if (node.type == LibCircuit.inputType || node.type == LibCircuit.outputType)
-				continue;
 			var img = types[node.type];
 			var drawText = node.type != LibCircuit.wireType;
 			this.renderNode(node, img, drawText);
@@ -47,81 +45,116 @@
 		this.renderEdges();
 	}
 
-	CircuitDrawer.prototype.renderIO = function() {
-		var self = this;
-		var ctx = this.nodeLayer.getContext("2d");
+	// CircuitDrawer.prototype.renderIO = function() {
+	// 	var self = this;
+	// 	var ctx = this.nodeLayer.getContext("2d");
 
-		ctx.save();
+	// 	ctx.save();
 
-		ctx.font = "16px sans";
+	// 	ctx.font = "16px sans";
 
-		var nInputs = this.circuitData.inputPins.length;
-		var inputStep = this.nodeLayer.height / (nInputs + 1);
+	// 	var nInputs = this.circuitData.inputPins.length;
+	// 	var inputStep = this.nodeLayer.height / (nInputs + 1);
 
-		ctx.clearRect(0, 0, this.ioStopX + 2 * this.pinRadius + 2, this.nodeLayer.height);
+	// 	ctx.clearRect(0, 0, this.ioStopX + 2 * this.pinRadius + 2, this.nodeLayer.height);
 
-		drawPins(nInputs, this.circuitData.inputPins, inputStep, 0, this.ioStopX, true);
+	// 	drawPins(nInputs, this.circuitData.inputPins, inputStep, 0, this.ioStopX, true);
 
-		var nOutputs = this.circuitData.outputPins.length;
-		var outputStep = this.nodeLayer.height / (nOutputs + 1);
+	// 	var nOutputs = this.circuitData.outputPins.length;
+	// 	var outputStep = this.nodeLayer.height / (nOutputs + 1);
 
-		ctx.clearRect(
-			this.nodeLayer.width - (this.ioStopX + 2 * this.pinRadius + 2), 
-			0, this.nodeLayer.width, this.nodeLayer.height
-		);
+	// 	ctx.clearRect(
+	// 		this.nodeLayer.width - (this.ioStopX + 2 * this.pinRadius + 2), 
+	// 		0, this.nodeLayer.width, this.nodeLayer.height
+	// 	);
 		
-		drawPins(nOutputs, this.circuitData.outputPins, outputStep, this.nodeLayer.width - this.ioStopX, this.nodeLayer.width, false);
+	// 	drawPins(nOutputs, this.circuitData.outputPins, outputStep, this.nodeLayer.width - this.ioStopX, this.nodeLayer.width, false);
 
-		function drawPins(n, arr, step, startX, stopX, pinOnRight) {
-			for (var i = 0; i < n; i++) {
-				var y = ( i + 1 ) * step;
-				var pin = arr[i];
+	// 	function drawPins(n, arr, step, startX, stopX, pinOnRight) {
+	// 		for (var i = 0; i < n; i++) {
+	// 			var y = ( i + 1 ) * step;
+	// 			var pin = arr[i];
 
-				// update pin positions in graph
-				var node = self.circuitData.graph[pin.nid];
+	// 			// update pin positions in graph
+	// 			var node = self.circuitData.graph[pin.nid];
 
-				node.pos = { x: startX, y: y };
+	// 			node.pos = { x: startX, y: y };
 				
-				node.rect = {
-					x: startX,
-					y: y,
-					width: (stopX - startX) + 2 * self.pinRadius + 2,
-					height: 20, // TODO is there a way to calculate this?
-				};
+	// 			node.rect = {
+	// 				x: startX,
+	// 				y: y,
+	// 				width: (stopX - startX) + 2 * self.pinRadius + 2,
+	// 				height: 20, // TODO is there a way to calculate this?
+	// 			};
 
-				ctx.beginPath();
-				ctx.moveTo(startX, y);
-				ctx.lineTo(stopX, y);
-				ctx.stroke();
+	// 			ctx.beginPath();
+	// 			ctx.moveTo(startX, y);
+	// 			ctx.lineTo(stopX, y);
+	// 			ctx.stroke();
 
-				ctx.fillText(pin.name, startX + 4, y - 4);
+	// 			ctx.fillText(pin.name, startX + 4, y - 4);
 
-				var pinX;
-				if (pinOnRight) {
-					pinX = stopX + self.pinRadius
-				} else {
-					pinX = startX - self.pinRadius
-				}
+	// 			var pinX;
+	// 			if (pinOnRight) {
+	// 				pinX = stopX + self.pinRadius
+	// 			} else {
+	// 				pinX = startX - self.pinRadius
+	// 			}
 
-				// node.pins[0].pos = { x: pinX, y: y };
+	// 			// node.pins[0].pos = { x: pinX, y: y };
 
-				ctx.save();
-				ctx.beginPath();
-				ctx.arc(pinX, y, self.pinRadius, 0, 2 * Math.PI);
-				ctx.fillStyle = "#000";
-				ctx.fill();
-				ctx.stroke();
-				ctx.restore();
+	// 			ctx.save();
+	// 			ctx.beginPath();
+	// 			ctx.arc(pinX, y, self.pinRadius, 0, 2 * Math.PI);
+	// 			ctx.fillStyle = "#000";
+	// 			ctx.fill();
+	// 			ctx.stroke();
+	// 			ctx.restore();
 
-				ctx.save();
-				ctx.font = "10px sans";
-				ctx.fillText(pin.nid, startX, y + 10);
-				ctx.restore();
-			}
-		}
+	// 			ctx.save();
+	// 			ctx.font = "10px sans";
+	// 			ctx.fillText(pin.nid, startX, y + 10);
+	// 			ctx.restore();
+	// 		}
+	// 	}
 
-		ctx.restore();
-	}
+	// 	ctx.restore();
+	// }
+
+	// function IODrawerDelegate(ctx, node, pinOnRight) {
+	// 	var pos = node.pos;
+	// 	var startX = pos.x;
+	// 	var stopX = pos.x + node.rect.width;
+
+	// 	ctx.beginPath();
+	// 	ctx.moveTo(startX, pos.y);
+	// 	ctx.lineTo(stopX, pos.y);
+	// 	ctx.stroke();
+
+	// 	ctx.fillText(node.name, pos.x + 4, pos.y - 4);
+
+	// 	var pinX;
+	// 	if (pinOnRight) {
+	// 		pinX = stopX + self.pinRadius
+	// 	} else {
+	// 		pinX = startX - self.pinRadius
+	// 	}
+
+	// 	// node.pins[0].pos = { x: pinX, y: y };
+
+	// 	ctx.save();
+	// 	ctx.beginPath();
+	// 	ctx.arc(pinX, pos.y, self.pinRadius, 0, 2 * Math.PI);
+	// 	ctx.fillStyle = "#000";
+	// 	ctx.fill();
+	// 	ctx.stroke();
+	// 	ctx.restore();
+
+	// 	ctx.save();
+	// 	ctx.font = "10px sans";
+	// 	ctx.fillText(node.nid, startX, pos.y + 10);
+	// 	ctx.restore();
+	// }
 
 	CircuitDrawer.prototype.updateNode = function(node, img, drawText, drawBoundingBox) {
 		this.deleteNode(node.rect);
@@ -135,6 +168,15 @@
 
 		if (img) {
 			ctx.drawImage(img, pos.x, pos.y);
+		}
+
+		if (node.name) {
+			// determine which side to print on
+			var textX = node.type == LibCircuit.inputType ? pos.x + 1 : pos.x + node.rect.width - 14;
+			ctx.save();
+			ctx.font = "14px sans";
+			ctx.fillText(node.name, textX, pos.y + 10);
+			ctx.restore();
 		}
 
 		if (drawText) {
@@ -282,10 +324,7 @@
 					rendered_set[eID] = true;
 				}
 
-				if (node.type === LibCircuit.inputType 
-				 || node.type === LibCircuit.outputType 
-				 || (pin.adj.length > 0 && pin.adj.length < 3)
-				) continue;
+				if (pin.adj.length > 0 && pin.adj.length < 3) continue;
 
 				var pin_pos = getPinPos(node, pid, this);
 				ctx.save();

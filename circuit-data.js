@@ -83,22 +83,22 @@
 		var type = this.graph[nid].type;
 		
 		// a bit of special handling for deleting io pins
-		if (type == LibCircuit.inputType || type == LibCircuit.outputType) {
-			var idx;
-			var io_lists = [ this.inputPins, this.outputPins ]
-			for (var i = io_lists.length - 1; i >= 0; i--) {
-				idx = io_lists[i].map(function (x) {
-					return x.nid;
-				}).indexOf(nid);
+		// if (type == LibCircuit.inputType || type == LibCircuit.outputType) {
+		// 	var idx;
+		// 	var io_lists = [ this.inputPins, this.outputPins ]
+		// 	for (var i = io_lists.length - 1; i >= 0; i--) {
+		// 		idx = io_lists[i].map(function (x) {
+		// 			return x.nid;
+		// 		}).indexOf(nid);
 
-				if (idx != -1) {
-					io_lists[i].splice(idx, 1);
-					break;
-				}
-			};
-			if (idx == -1)
-				console.warn("Could not delete io pin "+nid+" from inputPins/outputPins");
-		}
+		// 		if (idx != -1) {
+		// 			io_lists[i].splice(idx, 1);
+		// 			break;
+		// 		}
+		// 	};
+		// 	if (idx == -1)
+		// 		console.warn("Could not delete io pin "+nid+" from inputPins/outputPins");
+		// }
 
 		delete this.graph[nid];
 
@@ -137,8 +137,7 @@
 			this.undoStack.splice(idx, 1);
 	}
 
-	// special handling for IO b/c we don't have images/typedefs for them
-	CircuitData.prototype.addIO = function (name, isInput) {
+	CircuitData.prototype.addIOName = function(name, isInput) {
 		var type, pins;
 		if (isInput) {
 			type = LibCircuit.inputType;
@@ -148,14 +147,38 @@
 			pins = this.outputPins;
 		}
 
+		pins.push({
+			name: name
+		});
+	}
+
+	// special handling for IO b/c we don't have images/typedefs for them
+	CircuitData.prototype.addIO = function (name, pos, rect, isInput) {
+		var type;
+		if (isInput) {
+			type = LibCircuit.inputType;
+			// pins = this.inputPins;
+		} else { // is an output pin
+			type = LibCircuit.outputType;
+			// pins = this.outputPins;
+		}
+
 		var nid = String(this.nNodes++);
+
+		// var rect = {
+		// 	x: pos.x,
+		// 	y: pos.y,
+		// 	width: wireSize + 2 * wireSize,
+		// 	height: 2 * wireSize + 2,
+		// };
 
 		// for compatiblity with export add to graph
 		var node = {
+			nid: nid,
 			type: type,
 			name: name,
-			pos: null,
-			rect: null,
+			pos: pos,
+			rect: rect,
 			pins: [{
 				adj: [],
 			}]
@@ -163,10 +186,10 @@
 
 		this.graph[nid] = node;
 
-		pins.push({
-			name: name,
-			nid: nid,
-		})
+		// pins.push({
+		// 	name: name,
+		// 	nid: nid,
+		// })
 
 		this.undoStack.push({
 			undoType: 'node',
@@ -236,6 +259,22 @@
 
 		return nid;
 	};
+
+	CircuitData.prototype.moveNode = function(nid, pos, rect) {
+		var node = this.graph[nid];
+		var oldPos = node.pos;
+		var oldRect = node.rect;
+
+		node.pos = pos;
+		node.rect = rect;
+
+		this.undoStack.push({
+			undoType: 'move',
+			nid: nid,
+			pos: oldPos,
+			rect: oldRect,
+		});
+	}
 
 	CircuitData.prototype.addEdge = function(fromTuple, toTuple) {
 		var fromId = fromTuple[0];
@@ -391,12 +430,12 @@
 				y: node.pos.y + type.pins[pid][1],
 			};
 		} 
-		else if (node.type == LibCircuit.inputType) {
-			return {
-				x: node.pos.x + ioX,
-				y: node.pos.y,
-			};
-		}
+		// else if (node.type == LibCircuit.inputType) {
+		// 	return {
+		// 		x: node.pos.x + ioX,
+		// 		y: node.pos.y,
+		// 	};
+		// }
 		else {
 			return {
 				x: node.pos.x,
@@ -446,7 +485,7 @@
 
 		var undoType = data.undoType
 		// perform node deletion
-		if (data.undoType == 'node') {
+		if (undoType == 'node') {
 			var type = this.getNode(data.nid).type;
 			// for compatibility with client code
 			if (type == LibCircuit.inputType || type == LibCircuit.outputType) {
@@ -454,9 +493,11 @@
 			}
 			undoRect = this.graph[data.nid].rect;
 			this.deleteNode(data.nid);
+		} else if (undoType == 'move') {
+			this.moveNode(data.nid, data.pos, data.rect);
 		}
 		// perform edge deletion
-		else if (data.undoType == 'edge') {
+		else if (undoType == 'edge') {
 			this.deleteEdge(data.fromId, data.fromPin, data.toId, data.toPin);
 		} else {
 			console.warn("Unknown undo type in undo stack");
@@ -482,7 +523,7 @@
 		return data;
 	}
 
-	var latest_file_version = "6";
+	var latest_file_version = "7";
 
 	var converter_map = {
 		"0": version_0_converter,
@@ -491,6 +532,7 @@
 		"3": version_3_converter,
 		"4": version_4_converter,
 		"5": version_5_converter,
+		"6": version_6_converter,
 	};
 
 	// version 1 reduces file size by removing redundant data
@@ -577,6 +619,25 @@
 			data.graph[nid] = node;
 		}
 		data.version = "6";
+		return data;
+	}
+
+	// version 7 removed NIDs from inputPins/outputPins, and unified IO node and normal node representation
+	function version_6_converter(data) {
+		function ioPinConverter(x) { return { name: x.name }; }
+
+		data.inputPins = data.inputPins.map(ioPinConverter);
+		data.outputPins = data.outputPins.map(ioPinConverter);
+		
+		for (var nid in data.graph) {
+			var node = data.graph[nid];
+			// why weren't we storing this to begin with?
+			if (node.type == LibCircuit.inputType || node.type == LibCircuit.outputType) {
+				node.nid = nid;
+			}
+		}
+
+		data.version = "7";
 		return data;
 	}
 
