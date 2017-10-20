@@ -237,6 +237,22 @@
 		return nid;
 	};
 
+	CircuitData.prototype.moveNode = function(nid, pos, rect) {
+		var node = this.graph[nid];
+		var oldPos = node.pos;
+		var oldRect = node.rect;
+
+		node.pos = pos;
+		node.rect = rect;
+
+		this.undoStack.push({
+			undoType: 'move',
+			nid: nid,
+			pos: oldPos,
+			rect: oldRect,
+		});
+	}
+
 	CircuitData.prototype.addEdge = function(fromTuple, toTuple) {
 		var fromId = fromTuple[0];
 		var fromPin = fromTuple[1];
@@ -446,7 +462,7 @@
 
 		var undoType = data.undoType
 		// perform node deletion
-		if (data.undoType == 'node') {
+		if (undoType == 'node') {
 			var type = this.getNode(data.nid).type;
 			// for compatibility with client code
 			if (type == LibCircuit.inputType || type == LibCircuit.outputType) {
@@ -454,9 +470,11 @@
 			}
 			undoRect = this.graph[data.nid].rect;
 			this.deleteNode(data.nid);
+		} else if (undoType == 'move') {
+			this.moveNode(data.nid, data.pos, data.rect);
 		}
 		// perform edge deletion
-		else if (data.undoType == 'edge') {
+		else if (undoType == 'edge') {
 			this.deleteEdge(data.fromId, data.fromPin, data.toId, data.toPin);
 		} else {
 			console.warn("Unknown undo type in undo stack");
