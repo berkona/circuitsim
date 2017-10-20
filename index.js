@@ -530,10 +530,10 @@
 		// console.log("Exported data to object");
 		// console.log(data);
 		var serialized = JSON.stringify(data);
-    var compressed = LZString.compressToEncodedURIComponent(serialized);
-    console.log("Finished compressing export data, compression ratio: " + (serialized.length/compressed.length));
-    $("#export-panel").modal("show");
-		$("#export-panel textarea").text(serialized);
+	    var compressed = LZString.compressToEncodedURIComponent(serialized);
+	    console.log("Finished compressing export data, compression ratio: " + (serialized.length/compressed.length));
+	    $("#export-panel").modal("show");
+		$("#export-panel textarea").text(compressed);
 	}
 
 	expose(confirm_delete_action, 'confirm_delete_action');
