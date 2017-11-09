@@ -3,7 +3,7 @@ A SPA for diagramming, verifying and simulating transitor-level and gate-level c
 
 # License & Permissions
 ## TLDR
-Any one can use, modify, transform, etc. this work for any educational or personal reason.  Commericial usage is expressly forbidded without explicit permission from me (Jon Monroe) beforehand.  All I ask is that if you do use it, you provide proper attribution (and ideally link to this github) and share alike.
+Any one can use, modify, transform, etc. this work for any educational or personal reason.  Commericial usage is expressly forbidden without explicit permission from me (Jon Monroe) beforehand.  All I ask is that if you do use it, you provide proper attribution (and ideally link to this github) and share alike.
 
 ## Full Legalese
 Copyright (c) 2017 Jon Monroe, licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-sa/4.0/.
