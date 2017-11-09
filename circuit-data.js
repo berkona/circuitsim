@@ -198,12 +198,80 @@
 
 		return nid;
 	}
+	/**
+	 * Take two existing edges aTuple->bTuple & cTuple->dTuple and add a new wire connecting the two at posAB, posCD
+	 */
+	CircuitData.prototype.splice4 = function(aTuple, bTuple, posAB, cTuple, dTuple, posCD) {
+		var nidAB = String(this.nNodes++);
+		var nodeAB = createWireNode(nidAB, posAB);
+		this.graph[nidAB] = nodeAB;
+
+		var nidCD = String(this.nNodes++);
+		var nodeCD = createWireNode(nidCD, posCD);
+		this.graph[nidCD] = nodeCD;
+
+		this.deleteEdge(aTuple[0], aTuple[1], bTuple[0], bTuple[1]);
+		this.deleteEdge(cTuple[0], cTuple[1], dTuple[0], dTuple[1]);
+
+		this.addEdge(aTuple, [nidAB, 0], true);
+		this.addEdge([nidAB, 0], bTuple, true);
+
+		this.addEdge(cTuple, [nidCD, 0], true);
+		this.addEdge([nidCD, 0], dTuple, true);
+
+		this.addEdge([nidAB, 0], [nidCD, 0], true);
+
+		this.undoStack.push({
+			undoType: 'splice4',
+			wireAB: nidAB,
+			wireCD: nidCD,
+			a: aTuple,
+			b: bTuple,
+			c: cTuple,
+			d: dTuple,
+		});
+
+		return [ nidAB, nidCD ];
+	}
+
+	/**
+	 * Take an existing edge fromTuple->toTuple and insert a new wire node at pos,
+	 * Then add an edge from wire node to targetTuple
+	 */
+	CircuitData.prototype.splice3 = function(fromTuple, toTuple, targetTuple, pos) {
+		// create new wire
+		var nid = String(this.nNodes++);
+		var node = createWireNode(nid, pos);
+		this.graph[nid] = node;
+
+		// remove edge from->to
+		this.deleteEdge(fromTuple[0], fromTuple[1], toTuple[0], toTuple[1]);
+
+		// add edge from->new
+		this.addEdge(fromTuple, [nid, 0], true);
+
+		// add edge new->to
+		this.addEdge([ nid, 0], toTuple, true);
+ 		
+ 		// add edge new->target
+		this.addEdge([nid, 0], targetTuple, true);
+
+		// add to undo stack
+		this.undoStack.push({
+			undoType: 'splice3',
+			wire: nid,
+			from: fromTuple,
+			to: toTuple,
+			target: targetTuple,
+		});
+
+		return nid;
+	}
 
 	var wireSize = 8;
-
-	CircuitData.prototype.addWire = function(fromTuple, pos) {
-		var nid = String(this.nNodes++);
-		var node = {
+	
+	function createWireNode(nid, pos) {
+		return {
 			nid: nid,
 			type: LibCircuit.wireType,
 			pos: pos,
@@ -217,6 +285,27 @@
 				adj: [],
 			}],
 		};
+	}
+
+	/**
+	 * Add a wire w/o a connecting edge
+	 */
+	CircuitData.prototype.addWireBare = function(pos) {
+		var nid = String(this.nNodes++);
+		var node = createWireNode(nid, pos);
+		this.graph[nid] = node;
+		
+		this.undoStack.push({
+			undoType: 'node',
+			nid: nid,
+		});
+
+		return nid;
+	}
+
+	CircuitData.prototype.addWire = function(fromTuple, pos) {
+		var nid = String(this.nNodes++);
+		var node = createWireNode(nid, pos);
 
 		this.undoStack.push({
 			undoType: 'node',
@@ -260,7 +349,7 @@
 		return nid;
 	};
 
-	CircuitData.prototype.moveNode = function(nid, pos, rect) {
+	CircuitData.prototype.moveNode = function(nid, pos, rect, noUndo) {
 		var node = this.graph[nid];
 		var oldPos = node.pos;
 		var oldRect = node.rect;
@@ -268,15 +357,17 @@
 		node.pos = pos;
 		node.rect = rect;
 
-		this.undoStack.push({
-			undoType: 'move',
-			nid: nid,
-			pos: oldPos,
-			rect: oldRect,
-		});
+		if (!noUndo) {
+			this.undoStack.push({
+				undoType: 'move',
+				nid: nid,
+				pos: oldPos,
+				rect: oldRect,
+			});
+		}
 	}
 
-	CircuitData.prototype.addEdge = function(fromTuple, toTuple) {
+	CircuitData.prototype.addEdge = function(fromTuple, toTuple, noUndo) {
 		var fromId = fromTuple[0];
 		var fromPin = fromTuple[1];
 		var toId = toTuple[0];
@@ -305,13 +396,15 @@
 		var toNode = this.graph[toId];
 		toNode.pins[toPin].adj.push(fromTuple);
 
-		this.undoStack.push({
-			undoType: 'edge',
-			fromId: fromId,
-			fromPin: fromPin,
-			toId: toId,
-			toPin: toPin,
-		});
+		if (!noUndo) {
+			this.undoStack.push({
+				undoType: 'edge',
+				fromId: fromId,
+				fromPin: fromPin,
+				toId: toId,
+				toPin: toPin,
+			});
+		}
 	}
 
 	CircuitData.prototype.adjPins = function(nid, pid) {
@@ -494,12 +587,31 @@
 			undoRect = this.graph[data.nid].rect;
 			this.deleteNode(data.nid);
 		} else if (undoType == 'move') {
-			this.moveNode(data.nid, data.pos, data.rect);
+			this.moveNode(data.nid, data.pos, data.rect, true);
 		}
 		// perform edge deletion
 		else if (undoType == 'edge') {
 			this.deleteEdge(data.fromId, data.fromPin, data.toId, data.toPin);
-		} else {
+		} 
+		else if (undoType == 'splice3') {
+			this.addEdge(data.from, data.to);
+			this.deleteEdge(data.from[0], data.from[1], data.wire, 0);
+			this.deleteEdge(data.wire, 0, data.to[0], data.to[1]);
+			this.deleteEdge(data.wire, 0, data.target[0], data.target[1]);
+			this.deleteNode(data.wire);
+		}
+		else if (undoType == 'splice4') {
+			this.addEdge(data.a, data.b);
+			this.addEdge(data.c, data.d);
+			this.deleteEdge(data.a[0], data.a[1], data.wireAB, 0);
+			this.deleteEdge(data.wireAB, 0, data.b[0], data.b[1]);
+			this.deleteEdge(data.c[0], data.c[1], data.wireCD, 0);
+			this.deleteEdge(data.wireCD, 0, data.d[0], data.d[1]);
+			this.deleteEdge(data.wireAB, 0, data.wireCD, 0);
+			this.deleteNode(data.wireAB);
+			this.deleteNode(data.wireCD);
+		}
+		else {
 			console.warn("Unknown undo type in undo stack");
 		}
 

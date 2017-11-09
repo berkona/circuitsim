@@ -496,12 +496,15 @@
 		if (type == 'node' || type == 'io') {
 			circuitDrawer.deleteNode(result[1]);
 			circuitDrawer.renderEdges();
-		} else if (type == 'move') {
+		} 
+		else if (type == 'move' || type == 'splice3' || type == 'splice4') {
 			circuitDrawer.clear();
 			circuitDrawer.renderAll(getImageMap());
-		} else if (type == 'edge') {
+		} 
+		else if (type == 'edge') {
 			circuitDrawer.renderEdges();
-		} else {
+		} 
+		else {
 			console.warn("Got unknown undo type back from circuitData");
 		}
 	}
@@ -785,6 +788,7 @@
 	function change_mode_place() {
 		toolMode = "place";
 		lastClickedNode = null;
+		lastClickedEdge = null;
 		$("#toolSelectGroup button").removeClass("active");
 		$("#toolSelectAdd").addClass("active");
 		$(".mode-panel").addClass("hidden");
@@ -842,45 +846,75 @@
 		}
 	}
 
+	var lastClickedEdge = null;
+
 	function handle_pin_connect(pos) {
 		var closest_pin = circuitData.closestPin(pos, clickBox, node_types, gridSize - connectionNodeRadius);
 
-		if (lastClickedNode) {
+		if (lastClickedNode || lastClickedEdge) {
 			uiLayer.getContext("2d").clearRect(0, 0, uiLayer.width, uiLayer.height);
 			uiLayer.removeEventListener("mousemove", wire_draw_handler);
 
 			if (closest_pin) {
-				circuitData.addEdge(lastClickedNode, closest_pin);
-				circuitDrawer.renderEdges();
-			}
-			else if (!circuitData.pointIntersects(pos)) {
-				var nid;
-				var result = circuitDrawer.pointIntersects(pos, clickBox);
-				if (result) {
-					nid = circuitData.addWire(lastClickedNode, result.intersection);
-					// splice node into circuitData
-					circuitData.deleteEdge(result.from[0], result.from[1], result.to[0], result.to[1]);
-					var newEdgePoint = [ nid, 0 ];
-					circuitData.addEdge(result.from, newEdgePoint);
-					circuitData.addEdge(newEdgePoint, result.to);
-				} else {
-					nid = circuitData.addWire(lastClickedNode, pos);
+				// discriminate normal case from splice 3 case
+				// cannot be a splice4 since closest_pin is true
+				if (lastClickedNode) {
+					circuitData.addEdge(lastClickedNode, closest_pin);
+					circuitDrawer.renderEdges();
+				} 
+				// lastClickedEdge == true
+				else {
+					var nid = circuitData.splice3(lastClickedEdge.from, lastClickedEdge.to, closest_pin, lastClickedEdge.intersection);
+					circuitDrawer.renderNode(circuitData.getNode(nid));
+					circuitDrawer.renderEdges();
 				}
-				circuitDrawer.renderNode(circuitData.getNode(nid));
-				circuitDrawer.renderEdges();
 			}
-
+			// check if pos intersects a bounding-box but not close enough to a pin
+			else if (!circuitData.pointIntersects(pos)) {
+				// this must be either a splice3 or splice4
+				if (lastClickedNode) {
+					var nid;
+					var result = circuitDrawer.pointIntersects(pos, clickBox);
+					if (result) {
+						nid = circuitData.splice3(result.from, result.to, lastClickedNode, result.intersection);
+					} else {
+						nid = circuitData.addWire(lastClickedNode, pos);
+					}
+					circuitDrawer.renderNode(circuitData.getNode(nid));
+					circuitDrawer.renderEdges();
+				} 
+				// lastClickedEdge == true
+				else {
+					var result = circuitDrawer.pointIntersects(pos, clickBox);
+					// must be a splice4
+					if (result) {
+						var nids = circuitData.splice4(
+							lastClickedEdge.from, lastClickedEdge.to, lastClickedEdge.intersection, 
+							result.from, result.to, result.intersection);
+						circuitDrawer.renderNode(circuitData.getNode(nids[0]));
+						circuitDrawer.renderNode(circuitData.getNode(nids[1]));
+						circuitDrawer.renderEdges();
+					} 
+					// must be a splice3
+					else {
+						var nidA = circuitData.addWireBare(pos);
+						var nidB = circuitData.splice3(
+							lastClickedEdge.from, 
+							lastClickedEdge.to, 
+							[nidA, 0],
+							lastClickedEdge.intersection
+						);
+						circuitDrawer.renderNode(circuitData.getNode(nidA));
+						circuitDrawer.renderNode(circuitData.getNode(nidB));
+						circuitDrawer.renderEdges();
+					}
+				}
+			}
 			lastClickedNode = null;
 		} else if (!closest_pin) {
 			var result = circuitDrawer.pointIntersects(pos, clickBox);
 			if (result) {
-				// splice node into circuitData
-				circuitData.deleteEdge(result.from[0], result.from[1], result.to[0], result.to[1]);
-				var nid = circuitData.addWire(result.from, result.intersection);
-				circuitDrawer.renderNode(circuitData.getNode(nid));
-				lastClickedNode = [ nid, 0 ];
-				circuitData.addEdge(lastClickedNode, result.to);
-				circuitDrawer.renderEdges();
+				lastClickedEdge = result;
 				uiLayer.addEventListener("mousemove", wire_draw_handler);
 			} else {
 				console.warn("Could not find closest node or edge");
@@ -915,10 +949,15 @@
 
 		var pos = window_to_canvas(uiLayer, evt.clientX, evt.clientY);
 
-		if (!lastClickedNode)
-			return console.error("Could not get lastClickedNode this should not happen");
+		if (!lastClickedNode && !lastClickedEdge)
+			return console.error("Could not get lastClickedNode/lastClickedEdge this should not happen");
 
-		var pin_pos = circuitData.pinPos(lastClickedNode[0], lastClickedNode[1], node_types, gridSize - connectionNodeRadius);
+		var pin_pos;
+		if (lastClickedNode) {
+			pin_pos = circuitData.pinPos(lastClickedNode[0], lastClickedNode[1], node_types, gridSize - connectionNodeRadius);
+		} else {
+			pin_pos = lastClickedEdge.intersection;
+		}
 
 		var ctx = uiLayer.getContext("2d");
 		
