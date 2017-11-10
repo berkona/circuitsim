@@ -533,10 +533,10 @@
 		// console.log("Exported data to object");
 		// console.log(data);
 		var serialized = JSON.stringify(data);
-	    var compressed = LZString.compressToEncodedURIComponent(serialized);
-	    console.log("Finished compressing export data, compression ratio: " + (serialized.length/compressed.length));
+	    //var compressed = LZString.compressToEncodedURIComponent(serialized);
+	    //console.log("Finished compressing export data, compression ratio: " + (serialized.length/compressed.length));
 	    $("#export-panel").modal("show");
-		$("#export-panel textarea").text(compressed);
+		$("#export-panel textarea").text(serialized);
 	}
 
 	expose(confirm_delete_action, 'confirm_delete_action');
@@ -572,14 +572,7 @@
 			// auto-detect compressed vs uncompressed data
 			var serialized = $("#import-panel textarea").val();
       
-      var data;
-      try {
-				data = JSON.parse(serialized);
-			} catch (e) {
-				serialized = LZString.decompressFromEncodedURIComponent(serialized);
-				// if it fails here, user hasn't given us valid data
-				data = JSON.parse(serialized);
-			}
+			var data = JSON.parse(serialized);
 			
 			$("#import-panel textarea").val("");
 			$("#import-panel").modal("hide");
@@ -910,6 +903,7 @@
 					}
 				}
 			}
+			lastClickedEdge = null;
 			lastClickedNode = null;
 		} else if (!closest_pin) {
 			var result = circuitDrawer.pointIntersects(pos, clickBox);
