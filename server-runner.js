@@ -6,6 +6,8 @@ var fs = require('fs');
 var LibCircuit = require("./libcircuit");
 var CircuitData = require("./circuit-data");
 
+const LZString = require("./lz-string.min.js");
+
 if (process.argv.length != 3) {
 	console.log("USAGE: node server-runner.js CIRCUIT_DATA");
 } else {
@@ -39,6 +41,8 @@ function convertToRows(col_matrix) {
 	return row_matrix;
 }
 
+// var process = require('process');
+
 function main() {
 	var fName = process.argv[2];
 	try {
@@ -46,6 +50,7 @@ function main() {
 	} catch (err) {
 		console.log("runSimulation failed with message:");
 		console.log(err);
+		process.exitCode = 1;
 		return;
 	}
 
@@ -56,25 +61,27 @@ function main() {
 		return x.slice(result.inputs.length, x.length);
 	}));
 
-	function sortCols(a, b) {
-		if (a[0] < b[0]) {
-			return -1;
-		} else if (a[0] > b[0]) {
-			return 1;
-		} else {
-			return 0;
-		}
-	}
-	// sort based on lexographic ordering of header
-	// indepedently sort input and output so that inputs are always before outputs
-	input_cols.sort(sortCols);
-	outputs_cols.sort(sortCols);
+	// function sortCols(a, b) {
+	// 	if (a[0] < b[0]) {
+	// 		return -1;
+	// 	} else if (a[0] > b[0]) {
+	// 		return 1;
+	// 	} else {
+	// 		return 0;
+	// 	}
+	// }
+
+	// // sort based on lexographic ordering of header
+	// // indepedently sort input and output so that inputs are always before outputs
+	// input_cols.sort(sortCols);
+	// outputs_cols.sort(sortCols);
 
 	var input_rows = convertToRows(input_cols);
 	var output_rows = convertToRows(outputs_cols);
 
 	// if this is not true bad things will happen on output
 	if (input_rows.length !== output_rows.length){
+		process.exitCode = 1;
 		return console.log("Something horrible happened, input_rows !== output_rows");
 	}
 
@@ -91,6 +98,7 @@ function main() {
 function runSimulation(fname) {
 	var serialized = fs.readFileSync(fname);
 	var data = JSON.parse(serialized);
+
 	var circuitData = new CircuitData();
 	circuitData.import(data);
 
@@ -111,12 +119,12 @@ function runSimulation(fname) {
 		throw new Error("Circuit could not be simulated: invalid simType");
 	}
 
-	function GetName(x) {
-		return circuitData.graph[x].name;
-	}
+	// function GetName(x) {
+	// 	return circuitData.graph[x].name;
+	// }
 
-	result.inputs = result.inputs.map(GetName);
-	result.outputs = result.outputs.map(GetName);
+	// result.inputs = result.inputs.map(GetName);
+	// result.outputs = result.outputs.map(GetName);
 
 	return result;
 }

@@ -556,9 +556,9 @@
 		// nmos logic
 		if (node.type == nmosType) {
 			// drain
-			if (pid == 2 && node.pins[1].sim_value == '1') {
+			if ((pid == 2 && node.pins[1].sim_value == '1') || (pid == 0 && node.pins[1].sim_value == '1')) {
 				// propogate to source
-				var sourceAdj = node.pins[0].adj;
+				var sourceAdj = node.pins[(pid == 0 ? 2 : 0)].adj;
 				for (var i = sourceAdj.length - 1; i >= 0; i--) {
 					var adj = sourceAdj[i];
 					var toNID = adj[0];
@@ -570,9 +570,9 @@
 		// pmos logic
 		else if (node.type == pmosType) {
 			// source
-			if (pid == 0 && node.pins[1].sim_value == '0') {
+			if ((pid == 0 && node.pins[1].sim_value == '0') || (pid == 2 && node.pins[1].sim_value == '0')) {
 				// propogate to drain
-				var drainAdj = node.pins[2].adj;
+				var drainAdj = node.pins[(pid == 0 ? 2 : 0)].adj;
 				for (var i = drainAdj.length - 1; i >= 0; i--) {
 					var adj = drainAdj[i];
 					var toNID = adj[0];
@@ -610,8 +610,8 @@
 			}
 		}
 
-		var inputNames = Object.keys(inputNamesToNIDS);
-		var outputNames = Object.keys(outputNamesToNIDS);
+		var inputNames = Object.keys(inputNamesToNIDS).sort();
+		var outputNames = Object.keys(outputNamesToNIDS).sort();
 
 		var nRows = Math.pow(2, inputNames.length);
 		var ttRows = [];
