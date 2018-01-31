@@ -132,7 +132,7 @@ def main():
 	"""
 
 	if len(sys.argv) != 4:
-		print "USAGE: python csv_converter.py CSV_EXPORT_FILE GRADING_DIR ANSWER_DIR"
+		print "USAGE: python2 grader.py CSV_EXPORT_FILE GRADING_DIR ANSWER_DIR"
 		return
 
 	responses = []

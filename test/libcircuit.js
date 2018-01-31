@@ -36,7 +36,7 @@ describe("LibCircuit", function () {
 				var circuitData = new CircuitData();
 				circuitData.import(JSON.parse(fs.readFileSync(fileName)));
 				var result = LibCircuit.simulate(circuitData.graph);
-				//console.log(name, result);
+				// console.log(name, result);
 				compareResults(JSON.parse(fs.readFileSync(path.join("test/expected", name))), result);
 			});
 		}
