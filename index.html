@@ -416,32 +416,58 @@
 
 <!-- Export Modal -->
 <div class="modal fade" id="export-panel" tabindex="-1" role="dialog" aria-labelledby="exportTitle">
-  <div class="modal-dialog modal-lg" role="document">
+  <div class="modal-dialog" role="document">
     <div class="modal-content">
       <div class="modal-header">
       	<button type="button" class="close" aria-label="Close" data-dismiss="modal"><span aria-hidden="true">&times;</span></button>
         <h4 class="modal-title" id="exportTitle">Export Diagram</h4>
       </div>
       <div class="modal-body">
+
+      	<form id="export-panel-primary" class="row">
+      		<div class="col-md-10 col-md-offset-1">
+				<div id="export-panel-primary-filename-group" class="form-group has-error">
+					<label class="form-label">Enter the desired filename (without extention)</label>
+					<input id="export-panel-filename" type="text" class="form-control" oninput="check_filename()" />
+					<span id="export-panel-filename-error" class="help-block">Filename is required</span>
+				</div>
+				
+				<button id="export-panel-dl-btn" class="btn btn-primary" onclick="download_file()" type="button" disabled>Download file</button>
+			</div>
+      	</form>
+
       	<div class="row">
-	      	<div class="col-md-10 col-md-offset-1 alert alert-info">
-	      		<p><strong>Copy text below and save as desired.</strong></p>
-				<p><strong>IMPORTANT: the entire text must be saved. Use copy button or select all text with control/command-a and then copy with control/command-c </strong></p>
-	      	</div>
-      	</div>
-      	<div class="row">
-			<div class="col-md-1 col-md-offset-1">
-	      		<button type="button" class="btn btn-info copy-button" 
-	      				data-toggle="tooltip" data-placement="bottom" 
-						title="Copy to Clipboard" aria-label="Copy Text" 
-						data-clipboard-target="#export-data">
-						<span class="glyphicon glyphicon-copy" aria-hidden="true"></span>
-				</button>
-	      	</div>
-	      	<div class="col-md-9">
-				<textarea id="export-data" class="nowrap" style="width:100%; height:100%;"></textarea>
+      		<div class="col-md-10 col-md-offset-1 unselectable" onclick="$('#export-panel-fallback').toggleClass('hidden'); $('#export-panel-fallback-toggle').toggleClass('glyphicon-chevron-right'); $('#export-panel-fallback-toggle').toggleClass('glyphicon-chevron-down');">
+
+      			<h4 style="border-bottom: 2px solid grey;"><span id="export-panel-fallback-toggle" class="glyphicon glyphicon-chevron-right"></span>  Click here if download button does not work</h4>
       		</div>
+      	</div>
+
+      	<div id="export-panel-fallback" class="hidden">
+      		
+			<div class="row">
+				<div class="col-md-10 col-md-offset-1 alert alert-info">
+					<p><strong>Copy text below and save as desired.</strong></p>
+					<p><strong>IMPORTANT: the entire text must be saved. Use copy button or select all text with control/command-a and then copy with control/command-c </strong></p>
+				</div>
+			</div>
+
+			<div class="row">
+				<div class="col-md-1 col-md-offset-1">
+					<button type="button" class="btn btn-info copy-button" 
+							data-toggle="tooltip" data-placement="bottom" 
+							title="Copy to Clipboard" aria-label="Copy Text" 
+							data-clipboard-target="#export-data">
+							<span class="glyphicon glyphicon-copy" aria-hidden="true"></span>
+					</button>
+				</div>
+				<div class="col-md-9">
+					<textarea id="export-data" class="nowrap" style="width:100%; height:100%;"></textarea>
+				</div>
+			</div>
+
   		</div>
+
       </div>
     </div>
   </div>
@@ -492,7 +518,7 @@
 
 <!-- Import modal -->
 <div class="modal fade" id="import-panel" tabindex="-1" role="dialog" aria-labelledby="importTitle">
-  <div class="modal-dialog modal-lg" role="document">
+  <div class="modal-dialog" role="document">
     <div class="modal-content">
       <div class="modal-header">
         <h4 class="modal-title" id="importTitle">Import Diagram</h4>
@@ -511,7 +537,7 @@
 
 <!-- Simulate modal -->
 <div class="modal fade" id="simulate-panel" tabindex="-1" role="dialog" aria-labelledby="simulateTitle">
-  <div class="modal-dialog modal-lg" role="document">
+  <div class="modal-dialog" role="document">
     <div class="modal-content">
       <div class="modal-header">
       	<button type="button" class="close" aria-label="Close" data-dismiss="modal"><span aria-hidden="true">&times;</span></button>

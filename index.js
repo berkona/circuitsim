@@ -549,12 +549,49 @@
 		circuitDrawer.renderEdges();
 	}
 
-	// expose(show_panel, 'show_panel');
-	// function show_panel(selector) {
-	// 	// console.log("Showing panel: "+selector);
-	// 	// console.log($(selector));
-	// 	$(selector).removeClass("hidden");
-	// }
+	var FILENAME_REGEX = /^[A-Za-z0-9_\-]+$/;
+
+	expose(check_filename, 'check_filename')
+	function check_filename() {
+		var formGroup = $("#export-panel-primary-filename-group");
+		var errorBox = $("#export-panel-filename-error");
+		var fName = $("#export-panel-filename").val();
+
+		var errorText = null;
+		if (!FILENAME_REGEX.test(fName)) {
+			errorText = "Filename must be a string of at least length one consisting of only alphanumeric characters";
+		}
+
+		errorBox.text(errorText);
+		if (errorText) {
+			errorBox.show();
+			$("#export-panel-dl-btn").prop("disabled", true);
+			formGroup.addClass("has-error");
+		} else {
+			errorBox.hide();
+			$("#export-panel-dl-btn").prop("disabled", false);
+			formGroup.removeClass("has-error");
+		}
+
+		return errorText;
+	}
+
+	expose(download_file, 'download_file');
+	function download_file() {
+		if (check_filename()) {
+			return console.log("Suppressing invalid form submit");
+		}
+		var fName = $("#export-panel-filename").val();
+
+		var data = circuitData.export();
+		var serialized = JSON.stringify(data);
+
+		// actually do the download
+		var anchor = document.createElement("a");
+		anchor.download = fName + ".txt";
+		anchor.href = "data:text/plain," + serialized;
+		anchor.click();
+	}
 
 	function getImageMap() {
 		var imageMap = {};
